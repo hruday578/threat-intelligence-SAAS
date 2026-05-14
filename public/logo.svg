@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <defs>
+    <style>
+      .text-dark { fill: #4a4d54; font-family: 'Arial', sans-serif; font-weight: 700; font-size: 72px; letter-spacing: -1px; }
+      .text-white { fill: #ffffff; font-family: 'Arial', sans-serif; font-weight: 700; font-size: 72px; letter-spacing: -1px; }
+      .red-box { fill: #ed1c24; }
+      .wave { fill: none; stroke: #ed1c24; stroke-width: 5; stroke-linecap: round; }
+    </style>
+  </defs>
+  
+  <g transform="translate(90, 70)">
+    <!-- Radio Waves -->
+    <path class="wave" d="M -20,10 A 25,25 0 1,1 20,10" />
+    <path class="wave" d="M -35,20 A 45,45 0 1,1 35,20" />
+    <path class="wave" d="M -50,30 A 65,65 0 1,1 50,30" />
+    
+    <!-- Letter A -->
+    <text x="-32" y="32" class="text-dark">A</text>
+  </g>
+
+  <!-- Letters lert -->
+  <text x="125" y="102" class="text-dark">lert</text>
+  
+  <!-- Red Box -->
+  <rect x="235" y="42" width="120" height="70" class="red-box" />
+  
+  <!-- Letters Em -->
+  <text x="245" y="102" class="text-white">Em</text>
+</svg>
