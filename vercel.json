@@ -1,0 +1,32 @@
+{
+  "rewrites": [
+    {
+      "source": "/news-proxy",
+      "destination": "https://newsapi.ai/api/v1/article/getArticles"
+    },
+    {
+      "source": "/groq/:path*",
+      "destination": "https://api.groq.com/openai/v1/:path*"
+    },
+    {
+      "source": "/openrouter/:path*",
+      "destination": "https://openrouter.ai/api/v1/:path*"
+    },
+    {
+      "source": "/deepseek/:path*",
+      "destination": "https://api.deepseek.com/:path*"
+    },
+    {
+      "source": "/nominatim/:path*",
+      "destination": "https://nominatim.openstreetmap.org/:path*"
+    },
+    {
+      "source": "/overpass/:path*",
+      "destination": "https://overpass-api.de/api/interpreter/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
