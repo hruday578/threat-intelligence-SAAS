@@ -612,20 +612,12 @@ export default function MapsPage({
           // Try in-memory cache first, then persistent localStorage cache
           coords = geocodeCacheRef.current[region] || cache[region];
 
-          // Check built-in land-guaranteed coordinate table
+          // Check built-in land-guaranteed coordinate table for exact match
           if (!coords) {
-            // Try exact match first
             coords = CITY_COORDINATES[region];
-            // If not found, try matching any key that appears in the region string
-            if (!coords) {
-              const regionLower = region.toLowerCase();
-              const matchKey = Object.keys(CITY_COORDINATES).find(k =>
-                regionLower.includes(k.toLowerCase()) || k.toLowerCase().includes(regionLower)
-              );
-              if (matchKey) coords = CITY_COORDINATES[matchKey];
-            }
           }
 
+          // If not in cache or exact coordinates, query the real Nominatim API first
           if (!coords) {
             try {
               // Strategy 1: Query for city/town/village (always on land)
@@ -655,6 +647,22 @@ export default function MapsPage({
               await new Promise(r => setTimeout(r, 1100));
             } catch (e) {
               console.error('[Maps] Geocode failed for region:', region, e);
+            }
+          }
+
+          // If Nominatim fails or returns nothing, fall back to rough substring matching in CITY_COORDINATES
+          if (!coords) {
+            const regionLower = region.toLowerCase();
+            // Sort keys by length descending to match more specific names (e.g. "Tamil Nadu") before general names (e.g. "India")
+            const sortedKeys = Object.keys(CITY_COORDINATES).sort((a, b) => b.length - a.length);
+            const matchKey = sortedKeys.find(k =>
+              regionLower.includes(k.toLowerCase()) || k.toLowerCase().includes(regionLower)
+            );
+            if (matchKey) {
+              coords = CITY_COORDINATES[matchKey];
+              cache[region] = coords;
+              geocodeCacheRef.current[region] = coords;
+              localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
             }
           }
 
@@ -1123,10 +1131,10 @@ export default function MapsPage({
             </div>
             <div className="overlay-tabs">
               <button onClick={() => setActiveTab('threats')} className={`tab-btn ${activeTab === 'threats' ? 'active' : ''}`}>
-                📊 Threats ({markers.length})
+                📊 Threats ({filteredThreats.length})
               </button>
               <button onClick={() => setActiveTab('employees')} className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`}>
-                👥 Team ({employeeMarkers.length})
+                👥 Team ({filteredEmployees.length})
               </button>
               <button onClick={() => { setActiveTab('index'); setCountryFilter(null); }} className={`tab-btn ${activeTab === 'index' ? 'active' : ''}`}>
                 🌍 Index ({countryIndexList.length})
@@ -1185,6 +1193,12 @@ export default function MapsPage({
                           <div className="item-meta">
                             <span>🚨 {threat.ai?.hazard}</span>
                             <span>📍 {threat.ai?.region}</span>
+                            <span>📰 {(() => {
+                              const sourceNames = [...new Set(threat.sources?.map(s => s.source?.title || s.source?.uri || 'Unknown Source'))];
+                              return sourceNames.length > 1
+                                ? `${sourceNames[0]} + ${sourceNames.length - 1} more`
+                                : sourceNames[0] || 'Unknown Source';
+                            })()}</span>
                           </div>
                         </div>
                       );

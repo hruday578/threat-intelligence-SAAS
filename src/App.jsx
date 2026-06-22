@@ -13,23 +13,137 @@ import { TOP_SOURCES } from './data/sources';
 
 // ─── Operational Constants ──────────────────────────────────────────────────
 const TACTICAL_LIBRARY = [
-  'Wildfire', 'Flood', 'Earthquake', 'Hurricane', 'Tornado', 'Heatwave',
+  'Natural Disaster', 'Wildfire', 'Flood', 'Earthquake', 'Hurricane', 'Tornado', 'Heatwave',
+  'Tsunami', 'Landslide', 'Drought', 'Blizzard', 'Avalanche', 'Volcanic Eruption',
   'Cyber Attack', 'Data Breach', 'Explosion', 'Chemical Spill', 'Power Outage',
+  'Terrorism', 'Aviation Accident', 'Train Derailment', 'Industrial Accident',
   'Dubai', 'Saudi Arabia', 'UAE', 'India', 'USA'
 ];
 
 const HAZARD_CONCEPT_URIS = {
+  'natural disaster': 'http://en.wikipedia.org/wiki/Natural_disaster',
   'wildfire': 'http://en.wikipedia.org/wiki/Wildfire',
   'flood': 'http://en.wikipedia.org/wiki/Flood',
   'earthquake': 'http://en.wikipedia.org/wiki/Earthquake',
   'hurricane': 'http://en.wikipedia.org/wiki/Tropical_cyclone',
   'tornado': 'http://en.wikipedia.org/wiki/Tornado',
   'heatwave': 'http://en.wikipedia.org/wiki/Heat_wave',
+  'tsunami': 'http://en.wikipedia.org/wiki/Tsunami',
+  'landslide': 'http://en.wikipedia.org/wiki/Landslide',
+  'drought': 'http://en.wikipedia.org/wiki/Drought',
+  'blizzard': 'http://en.wikipedia.org/wiki/Blizzard',
+  'avalanche': 'http://en.wikipedia.org/wiki/Avalanche',
+  'volcanic eruption': 'http://en.wikipedia.org/wiki/Volcanic_eruption',
   'cyber attack': 'http://en.wikipedia.org/wiki/Cyberattack',
   'data breach': 'http://en.wikipedia.org/wiki/Data_breach',
   'explosion': 'http://en.wikipedia.org/wiki/Explosion',
   'chemical spill': 'http://en.wikipedia.org/wiki/Chemical_spill',
-  'power outage': 'http://en.wikipedia.org/wiki/Power_outage'
+  'power outage': 'http://en.wikipedia.org/wiki/Power_outage',
+  'terrorism': 'http://en.wikipedia.org/wiki/Terrorism',
+  'aviation accident': 'http://en.wikipedia.org/wiki/Aviation_accidents_and_incidents',
+  'train derailment': 'http://en.wikipedia.org/wiki/Train_derailment',
+  'industrial accident': 'http://en.wikipedia.org/wiki/Industrial_accident',
+};
+
+const CONCEPT_EXPANSIONS = {
+  // Natural Disaster
+  'http://en.wikipedia.org/wiki/Natural_disaster': [
+    'http://en.wikipedia.org/wiki/Natural_disaster',
+    'http://en.wikipedia.org/wiki/Earthquake',
+    'http://en.wikipedia.org/wiki/Tsunami',
+    'http://en.wikipedia.org/wiki/Tropical_cyclone',
+    'http://en.wikipedia.org/wiki/Hurricane',
+    'http://en.wikipedia.org/wiki/Tornado',
+    'http://en.wikipedia.org/wiki/Wildfire',
+    'http://en.wikipedia.org/wiki/Flood',
+    'http://en.wikipedia.org/wiki/Flash_flood',
+    'http://en.wikipedia.org/wiki/Landslide',
+    'http://en.wikipedia.org/wiki/Volcanic_eruption',
+    'http://en.wikipedia.org/wiki/Avalanche',
+    'http://en.wikipedia.org/wiki/Drought',
+    'http://en.wikipedia.org/wiki/Heat_wave',
+    'http://en.wikipedia.org/wiki/Blizzard',
+    'http://en.wikipedia.org/wiki/Dust_storm',
+    'http://en.wikipedia.org/wiki/Sinkhole'
+  ],
+  // Cyberattack
+  'http://en.wikipedia.org/wiki/Cyberattack': [
+    'http://en.wikipedia.org/wiki/Cyberattack',
+    'http://en.wikipedia.org/wiki/Cybercrime',
+    'http://en.wikipedia.org/wiki/Data_breach',
+    'http://en.wikipedia.org/wiki/Ransomware',
+    'http://en.wikipedia.org/wiki/Malware',
+    'http://en.wikipedia.org/wiki/Phishing',
+    'http://en.wikipedia.org/wiki/Hacker'
+  ],
+  // Infectious disease
+  'http://en.wikipedia.org/wiki/Infectious_disease': [
+    'http://en.wikipedia.org/wiki/Infectious_disease',
+    'http://en.wikipedia.org/wiki/Pandemic',
+    'http://en.wikipedia.org/wiki/Epidemic',
+    'http://en.wikipedia.org/wiki/Outbreak',
+    'http://en.wikipedia.org/wiki/COVID-19',
+    'http://en.wikipedia.org/wiki/Ebola_virus_disease',
+    'http://en.wikipedia.org/wiki/Mpox',
+    'http://en.wikipedia.org/wiki/Tuberculosis',
+    'http://en.wikipedia.org/wiki/Cholera'
+  ],
+  // Climate change
+  'http://en.wikipedia.org/wiki/Climate_change': [
+    'http://en.wikipedia.org/wiki/Climate_change',
+    'http://en.wikipedia.org/wiki/Global_warming',
+    'http://en.wikipedia.org/wiki/Air_pollution',
+    'http://en.wikipedia.org/wiki/Water_pollution',
+    'http://en.wikipedia.org/wiki/Oil_spill',
+    'http://en.wikipedia.org/wiki/Deforestation'
+  ],
+  // War / Armed Conflict
+  'http://en.wikipedia.org/wiki/War': [
+    'http://en.wikipedia.org/wiki/War',
+    'http://en.wikipedia.org/wiki/Armed_conflict',
+    'http://en.wikipedia.org/wiki/Civil_war',
+    'http://en.wikipedia.org/wiki/Terrorism',
+    'http://en.wikipedia.org/wiki/Terrorist_attack',
+    'http://en.wikipedia.org/wiki/Insurgency',
+    'http://en.wikipedia.org/wiki/Genocide',
+    'http://en.wikipedia.org/wiki/Military_operation',
+    'http://en.wikipedia.org/wiki/Airstrike',
+    'http://en.wikipedia.org/wiki/Drone_strike'
+  ],
+  'http://en.wikipedia.org/wiki/Armed_conflict': [
+    'http://en.wikipedia.org/wiki/Armed_conflict',
+    'http://en.wikipedia.org/wiki/War',
+    'http://en.wikipedia.org/wiki/Civil_war',
+    'http://en.wikipedia.org/wiki/Terrorism',
+    'http://en.wikipedia.org/wiki/Terrorist_attack',
+    'http://en.wikipedia.org/wiki/Insurgency',
+    'http://en.wikipedia.org/wiki/Genocide',
+    'http://en.wikipedia.org/wiki/Military_operation',
+    'http://en.wikipedia.org/wiki/Airstrike',
+    'http://en.wikipedia.org/wiki/Drone_strike'
+  ],
+  // Terrorism
+  'http://en.wikipedia.org/wiki/Terrorism': [
+    'http://en.wikipedia.org/wiki/Terrorism',
+    'http://en.wikipedia.org/wiki/Terrorist_attack',
+    'http://en.wikipedia.org/wiki/Hostage',
+    'http://en.wikipedia.org/wiki/Assassination',
+    'http://en.wikipedia.org/wiki/Kidnapping'
+  ],
+  // Industrial accident
+  'http://en.wikipedia.org/wiki/Industrial_accident': [
+    'http://en.wikipedia.org/wiki/Industrial_accident',
+    'http://en.wikipedia.org/wiki/Explosion',
+    'http://en.wikipedia.org/wiki/Nuclear_and_radiation_accidents_and_incidents',
+    'http://en.wikipedia.org/wiki/Chemical_spill',
+    'http://en.wikipedia.org/wiki/Building_collapse',
+    'http://en.wikipedia.org/wiki/Mining_accident',
+    'http://en.wikipedia.org/wiki/Gas_leak',
+    'http://en.wikipedia.org/wiki/Shipwreck',
+    'http://en.wikipedia.org/wiki/Train_wreck',
+    'http://en.wikipedia.org/wiki/Aviation_accidents_and_incidents',
+    'http://en.wikipedia.org/wiki/Traffic_collision'
+  ]
 };
 
 
@@ -471,7 +585,8 @@ export default function App() {
 
       // 2. Concepts filter (broad umbrella topics from dropdown)
       if (params.concepts.length > 0) {
-        const conceptParts = params.concepts.map(c => ({ "conceptUri": c.uri }));
+        const conceptUris = [...new Set(params.concepts.flatMap(c => CONCEPT_EXPANSIONS[c.uri] || [c.uri]))];
+        const conceptParts = conceptUris.map(uri => ({ "conceptUri": uri }));
         if (conceptParts.length === 1) {
           queryParts.push(conceptParts[0]);
         } else {
@@ -481,10 +596,22 @@ export default function App() {
 
       // 3. Keywords / Hazards mapping to conceptUri where available, fallback to keyword
       if (keywords.length > 0) {
-        const keywordParts = keywords.map(kw => {
+        const keywordParts = [];
+        const seenUris = new Set();
+        keywords.forEach(kw => {
           const normalized = kw.toLowerCase().trim();
           const conceptUri = HAZARD_CONCEPT_URIS[normalized];
-          return conceptUri ? { "conceptUri": conceptUri } : { "keyword": kw };
+          if (conceptUri) {
+            const expanded = CONCEPT_EXPANSIONS[conceptUri] || [conceptUri];
+            expanded.forEach(uri => {
+              if (!seenUris.has(uri)) {
+                seenUris.add(uri);
+                keywordParts.push({ "conceptUri": uri });
+              }
+            });
+          } else {
+            keywordParts.push({ "keyword": kw });
+          }
         });
         if (keywordParts.length === 1) {
           queryParts.push(keywordParts[0]);
@@ -522,17 +649,49 @@ export default function App() {
         let res;
         for (let attempts = 0; attempts < 2; attempts++) {
           try {
+            // Separate date from topic conditions
+            const queryConditions = qParts.filter(p => !p.dateStart && !p.dateEnd);
+            const datePart = qParts.find(p => p.dateStart);
+
+            // lang MUST be inside $query.$and — $filter does NOT support lang in EventRegistry AQL
+            const allConditions = [{ "lang": "eng" }, ...queryConditions];
+
+            const queryBlock = {
+              "$query": allConditions.length === 1
+                ? allConditions[0]
+                : { "$and": allConditions }
+            };
+
+            const filterBlock = datePart
+              ? { "$filter": { "dateStart": datePart.dateStart, "dateEnd": datePart.dateEnd } }
+              : {};
+
             const body = {
-              apiKey: newsKey, action: "getArticles", articlesCount: count,
-              articlesSortBy: sortBy, resultType: "articles", dataType: ["news"],
-              query: { "$query": { "$and": qParts } }
+              apiKey: newsKey,
+              action: "getArticles",
+              articlesCount: count,
+              articlesSortBy: sortBy,
+              resultType: "articles",
+              dataType: ["news"],
+              articleBodyLen: 300,
+              keywordSearchMode: "simple",
+              query: { ...queryBlock, ...filterBlock }
             };
             console.log("AlertEm NewsAPI Request:", JSON.stringify(body, null, 2));
             res = await fetch(`/news-proxy`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body)
             });
-            if (res.ok) return await res.json();
+            if (res.ok) {
+              const data = await res.json();
+              // Client-side safety net: strip any non-English articles that slip through
+              if (data?.articles?.results) {
+                data.articles.results = data.articles.results.filter(
+                  a => !a.lang || a.lang === 'eng'
+                );
+              }
+              return data;
+            }
           } catch (e) {
             if (attempts === 1) throw new Error(`NETWORK_FAILURE: ${e.message}`);
             await new Promise(r => setTimeout(r, 1000));
@@ -610,7 +769,7 @@ export default function App() {
               model: activeProvider.model,
               temperature: 0.1,
               messages: [
-                { role: 'system', content: BATCH_CLASSIFY_PROMPT(keywords.join(', '), locationContext, expandedZoneKeywords) },
+                { role: 'system', content: BATCH_CLASSIFY_PROMPT([...keywords, ...params.concepts.map(c => c.label)].join(', '), locationContext, expandedZoneKeywords) },
                 { role: 'user', content: JSON.stringify(payload) }
               ]
             })
@@ -936,16 +1095,19 @@ export default function App() {
                 {params.prefSrc?.length > 0 && rawArticles.length > 0 && (() => {
                   // Count unique preferred articles at raw level (not inflated by event grouping)
                   const seen = new Set();
-                  let count = 0;
+                  let totalPreferred = 0;
                   rawArticles.forEach(a => {
                     if (params.prefSrc.some(ps => domainMatch(a.source?.uri, ps.uri))) {
                       const key = a.title?.toLowerCase().trim();
-                      if (key && !seen.has(key)) { seen.add(key); count++; }
+                      if (key && !seen.has(key)) { seen.add(key); totalPreferred++; }
                     }
                   });
-                  return count > 0 ? (
+                  const selectedPreferred = activeArticle
+                    ? activeArticle.sources.filter(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))).length
+                    : 0;
+                  return totalPreferred > 0 ? (
                     <span className="text-[8px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-md border border-red-100">
-                      {count} preferred articles
+                      {activeArticle ? `${selectedPreferred} of ${totalPreferred} preferred` : `${totalPreferred} total preferred`}
                     </span>
                   ) : null;
                 })()}
@@ -954,7 +1116,7 @@ export default function App() {
                 {activeArticle ? (
                   <>
                     {/* Context label */}
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest px-1">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-1">
                       Sources for selected alert
                     </p>
 
@@ -962,22 +1124,22 @@ export default function App() {
                     <div className="bg-white border border-red-100 rounded-2xl overflow-hidden shadow-sm">
                       <div className="px-3 py-2 border-b border-red-50 flex justify-between items-center bg-red-50/60">
                         <div>
-                          <h3 className="text-[10px] font-black text-red-700 uppercase tracking-widest">
+                          <h3 className="text-[11px] font-semibold text-red-700 uppercase tracking-widest">
                             {params.prefSrc?.length > 0 ? '⭐ Preferred Sources' : 'Authentic Resources'}
                           </h3>
                           {params.prefSrc?.length > 0 && (
-                            <p className="text-[7px] text-red-400 mt-0.5">
+                            <p className="text-[11px] font-semibold text-red-400 mt-0.5">
                               {params.prefSrc.map(ps => ps.label || ps.uri).join(', ')}
                             </p>
                           )}
                         </div>
-                        <span className="text-[9px] font-black text-red-500 bg-white px-2 py-0.5 rounded-lg border border-red-100">
+                        <span className="text-[11px] font-semibold text-red-500 bg-white px-2 py-0.5 rounded-lg border border-red-100">
                           {activeArticle.sources.filter(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))).length} articles
                         </span>
                       </div>
                       <div className="p-2 space-y-1">
                         {params.prefSrc?.length === 0 ? (
-                          <div className="p-3 text-center text-[9px] font-bold text-gray-400">
+                          <div className="p-3 text-center text-[11px] font-semibold text-gray-400">
                             Select a preferred source to see filtered results
                           </div>
                         ) : activeArticle.sources.filter(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))).length > 0 ? (
@@ -986,22 +1148,22 @@ export default function App() {
                               className="block p-2.5 rounded-xl hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
                               {/* Source badge */}
                               <div className="flex items-center gap-1.5 mb-1">
-                                <span className="text-[7px] font-black uppercase tracking-widest bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">
+                                <span className="text-[11px] font-semibold uppercase tracking-widest bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">
                                   {src.source?.title || src.source?.uri || 'Source'}
                                 </span>
                                 {src.date && (
-                                  <span className="text-[7px] text-gray-400">{src.date}</span>
+                                  <span className="text-[11px] font-semibold text-gray-400">{src.date}</span>
                                 )}
                               </div>
-                              <h4 className="text-[10px] font-bold text-gray-800 leading-snug line-clamp-2">
+                              <h4 className="text-[11px] font-semibold text-gray-800 leading-snug line-clamp-2">
                                 {src.title}
                               </h4>
                             </a>
                           ))
                         ) : (
                           <div className="p-4 text-center">
-                            <p className="text-[9px] font-black text-gray-400">No articles from preferred sources</p>
-                            <p className="text-[8px] text-gray-300 mt-1">for this specific alert</p>
+                            <p className="text-[11px] font-semibold text-gray-400">No articles from preferred sources</p>
+                            <p className="text-[11px] font-semibold text-gray-300 mt-1">for this specific alert</p>
                           </div>
                         )}
                       </div>
@@ -1034,15 +1196,15 @@ export default function App() {
                         <a key={`other-${si}`} href={src.url} target="_blank" rel="noopener noreferrer"
                           className={`block p-2.5 rounded-xl transition-colors border ${isCurrentEvent ? 'border-blue-100 bg-blue-50/30 hover:bg-blue-50' : 'border-transparent hover:bg-gray-50 hover:border-gray-100'}`}>
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            <span className="text-[7px] font-black uppercase tracking-widest bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md">
+                            <span className="text-[11px] font-semibold uppercase tracking-widest bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md">
                               {src.source?.title || src.source?.uri || 'Source'}
                             </span>
                             {isCurrentEvent && (
-                              <span className="text-[6px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md">This Alert</span>
+                              <span className="text-[11px] font-semibold uppercase tracking-widest bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md">This Alert</span>
                             )}
-                            {src.date && <span className="text-[7px] text-gray-400">{src.date}</span>}
+                            {src.date && <span className="text-[11px] font-semibold text-gray-400">{src.date}</span>}
                           </div>
-                          <h4 className="text-[10px] font-bold text-gray-700 leading-snug line-clamp-2">{src.title}</h4>
+                          <h4 className="text-[11px] font-semibold text-gray-700 leading-snug line-clamp-2">{src.title}</h4>
                         </a>
                       );
 
@@ -1050,27 +1212,27 @@ export default function App() {
                         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                           <div className="px-3 py-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/80">
                             <div>
-                              <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Other Sources</h3>
+                              <h3 className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest">Other Sources</h3>
                               {params.prefSrc?.length > 0 && (
-                                <p className="text-[7px] text-gray-400 mt-0.5">All non-preferred articles</p>
+                                <p className="text-[11px] font-semibold text-gray-400 mt-0.5">All non-preferred articles</p>
                               )}
                             </div>
-                            <span className="text-[9px] font-black text-gray-400 bg-white px-2 py-0.5 rounded-lg border border-gray-100">
+                            <span className="text-[11px] font-semibold text-gray-400 bg-white px-2 py-0.5 rounded-lg border border-gray-100">
                               {totalOther} articles
                             </span>
                           </div>
                           <div className="p-2 space-y-1 max-h-[420px] overflow-y-auto">
                             {totalOther === 0 ? (
                               <div className="p-4 text-center">
-                                <p className="text-[9px] font-black text-gray-400">No other articles found</p>
-                                <p className="text-[8px] text-gray-300 mt-1">All results are from preferred sources</p>
+                                <p className="text-[11px] font-semibold text-gray-400">No other articles found</p>
+                                <p className="text-[11px] font-semibold text-gray-300 mt-1">All results are from preferred sources</p>
                               </div>
                             ) : (
                               <>
                                 {thisEventOther.map((src, si) => renderArticle(src, si, true))}
                                 {otherEventArticles.length > 0 && thisEventOther.length > 0 && (
                                   <div className="px-2 py-1.5">
-                                    <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest">From other alerts</span>
+                                    <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-widest">From other alerts</span>
                                   </div>
                                 )}
                                 {otherEventArticles.map((src, si) => renderArticle(src, si + thisEventOther.length, false))}
@@ -1084,7 +1246,7 @@ export default function App() {
                   </>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center opacity-40 grayscale">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Select an Alert<br />to view resources</p>
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center">Select an Alert<br />to view resources</p>
                   </div>
                 )}
               </div>
@@ -1096,8 +1258,8 @@ export default function App() {
               <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
                 <span className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Intel Ledger</span>
                 <div className="flex gap-2">
-                  <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Alerts: {articles.filter(a => a.ai.classification === 'ALERT').length}</span>
-                  <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Info: {articles.filter(a => a.ai.classification === 'INFORMATIVE').length}</span>
+                  <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Alerts: {articles.filter(a => a.ai.classification === 'ALERT').length}</span>
+                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Info: {articles.filter(a => a.ai.classification === 'INFORMATIVE').length}</span>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/30">
@@ -1116,14 +1278,32 @@ export default function App() {
                         }`}
                     >
                       <div className="flex justify-between items-center mb-3">
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${isAlert
-                            ? 'bg-red-600 text-white'
-                            : isInfo
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}>
-                          {art.ai.classification}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${isAlert
+                              ? 'bg-red-600 text-white'
+                              : isInfo
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}>
+                            {art.ai.classification}
+                          </span>
+                          {(() => {
+                            const sourceNames = [...new Set(art.sources?.map(s => s.source?.title || s.source?.uri || 'Unknown Source'))];
+                            const hasPreferred = art.sources?.some(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri)));
+                            const sourceText = sourceNames.length > 1
+                              ? `${sourceNames[0]} + ${sourceNames.length - 1} more`
+                              : sourceNames[0] || 'Unknown Source';
+                            return (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
+                                hasPreferred
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-gray-50 text-gray-500 border-gray-200'
+                              }`}>
+                                {hasPreferred && '⭐ '}{sourceText}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         <span className={`w-2 h-2 rounded-full shadow-inner ${isAlert
                             ? (pushedAlerts.has(art.id) ? 'bg-green-500' : 'bg-red-500')
                             : isInfo
@@ -1131,21 +1311,49 @@ export default function App() {
                               : 'bg-gray-300'
                           }`}></span>
                       </div>
-                      <h3 className={`text-xs font-black leading-snug mb-2 ${isSelected ? (isAlert ? 'text-red-700' : isInfo ? 'text-blue-700' : 'text-gray-900') : 'text-gray-900'
+                      <h3 className={`text-[11px] font-semibold leading-snug mb-2 ${isSelected ? (isAlert ? 'text-red-700' : isInfo ? 'text-blue-700' : 'text-gray-900') : 'text-gray-900'
                         }`}>
                         {art.title}
                       </h3>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase mb-3 tracking-wide">{art.ai.hazard} in {art.ai.region}</p>
+                      {/* Brief excerpt */}
+                      {(() => {
+                        const brief = (art.sources?.[0]?.body || '').trim();
+                        return brief ? (
+                          <p className="text-[11px] font-semibold text-gray-400 leading-relaxed mb-3 line-clamp-2">
+                            {brief.slice(0, 160)}{brief.length > 160 ? '…' : ''}
+                          </p>
+                        ) : null;
+                      })()}
+                      <p className="text-[11px] font-semibold text-gray-500 uppercase mb-3 tracking-wide">{art.ai.hazard} in {art.ai.region}</p>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString()}</span>
-                        {art.ai.urgency === 'HIGH' && isAlert && <span className="text-[8px] font-black text-red-600 animate-pulse">URGENT</span>}
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-2">
+                          {art.ai.urgency === 'HIGH' && isAlert && <span className="text-[11px] font-semibold text-red-600 animate-pulse">URGENT</span>}
+                          {art.sources?.[0]?.url && (
+                            <a
+                              href={art.sources[0].url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                                isAlert
+                                  ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white hover:border-red-600'
+                                  : isInfo
+                                    ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white hover:border-blue-600'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-700 hover:text-white hover:border-gray-700'
+                              }`}
+                            >
+                              Read More ↗
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
                 {articles.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center opacity-30 grayscale">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No Articles Detected</p>
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">No Articles Detected</p>
                   </div>
                 )}
               </div>
@@ -1169,15 +1377,15 @@ export default function App() {
                   <div className={`px-5 py-3 border-b flex items-center gap-2 ${activeArticle.ai.classification === 'ALERT' ? 'bg-red-50 border-red-100' :
                       activeArticle.ai.classification === 'INFORMATIVE' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
                     }`}>
-                    <span className="text-xs font-black text-gray-600 uppercase tracking-wide truncate">{activeArticle.ai.hazard} — {activeArticle.ai.region}</span>
+                    <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide truncate">{activeArticle.ai.hazard} — {activeArticle.ai.region}</span>
                   </div>
 
                   <div className="p-4 space-y-4">
                     {activeArticle.ai.classification === 'IRRELEVANT' ? (
                       <div className="p-5 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Intel Assessment</span>
-                        <p className="text-sm font-semibold text-gray-700 leading-relaxed">{activeArticle.ai.reasoning}</p>
-                        <p className="text-xs text-gray-400 italic">No operational mitigation action required for out-of-scope intelligence.</p>
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest block">Intel Assessment</span>
+                        <p className="text-[11px] font-semibold text-gray-700 leading-relaxed">{activeArticle.ai.reasoning}</p>
+                        <p className="text-[11px] font-semibold text-gray-400 italic">No operational mitigation action required for out-of-scope intelligence.</p>
                       </div>
                     ) : (
                       <>
@@ -1185,7 +1393,7 @@ export default function App() {
                         <div className="rounded-2xl overflow-hidden border border-red-100 shadow-sm">
                           <div className="px-4 py-2.5 bg-red-600 flex items-center gap-2">
                             <svg className="w-3.5 h-3.5 text-red-200 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Mitigation Strategy</span>
+                            <span className="text-[11px] font-semibold text-white uppercase tracking-widest">Mitigation Strategy</span>
                           </div>
                           {(() => {
                             const raw = (activeArticle.ai.mitigation || '').trim();
@@ -1195,15 +1403,15 @@ export default function App() {
                               <ul className="divide-y divide-red-50 bg-white">
                                 {steps.map((step, idx) => (
                                   <li key={idx} className="flex gap-3 px-4 py-3.5 items-start hover:bg-red-50/40 transition-colors">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-black mt-0.5 border border-red-200">{idx + 1}</span>
-                                    <span className="text-sm font-semibold text-gray-800 leading-relaxed">{step.trim()}</span>
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[11px] font-semibold mt-0.5 border border-red-200">{idx + 1}</span>
+                                    <span className="text-[11px] font-semibold text-gray-800 leading-relaxed">{step.trim()}</span>
                                   </li>
                                 ))}
                               </ul>
                             ) : (
                               <div className="px-4 py-6 text-center bg-white">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
-                                <p className="text-[10px] text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
+                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
+                                <p className="text-[11px] font-semibold text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
                               </div>
                             );
                           })()}
@@ -1213,7 +1421,7 @@ export default function App() {
                         <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                           <div className="px-4 py-2.5 bg-gray-800 flex items-center gap-2">
                             <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Civilian Action Protocol</span>
+                            <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-widest">Civilian Action Protocol</span>
                           </div>
                           {(() => {
                             const raw = (activeArticle.ai.citizen_action || '').trim();
@@ -1223,15 +1431,15 @@ export default function App() {
                               <ul className="divide-y divide-gray-100 bg-white">
                                 {steps.map((step, idx) => (
                                   <li key={idx} className="flex gap-3 px-4 py-3.5 items-start hover:bg-gray-50 transition-colors">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-black mt-0.5 border border-gray-200">{idx + 1}</span>
-                                    <span className="text-sm font-semibold text-gray-700 leading-relaxed">{step.trim()}</span>
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[11px] font-semibold mt-0.5 border border-gray-200">{idx + 1}</span>
+                                    <span className="text-[11px] font-semibold text-gray-700 leading-relaxed">{step.trim()}</span>
                                   </li>
                                 ))}
                               </ul>
                             ) : (
                               <div className="px-4 py-6 text-center bg-white">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
-                                <p className="text-[10px] text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
+                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
+                                <p className="text-[11px] font-semibold text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
                               </div>
                             );
                           })()}
@@ -1244,10 +1452,10 @@ export default function App() {
                       <div className="rounded-2xl overflow-hidden border border-amber-100 shadow-sm">
                         <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
                           <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest">AI Reasoning</span>
+                          <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-widest">AI Reasoning</span>
                         </div>
                         <div className="px-4 py-3.5 bg-white">
-                          <p className="text-sm font-semibold text-gray-600 leading-relaxed italic">"{activeArticle.ai.reasoning}"</p>
+                          <p className="text-[11px] font-semibold text-gray-600 leading-relaxed italic">"{activeArticle.ai.reasoning}"</p>
                         </div>
                       </div>
                     )}
@@ -1255,7 +1463,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-40 grayscale">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select an Article</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Select an Article</p>
                 </div>
               )}
             </section>
