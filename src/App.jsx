@@ -1258,12 +1258,8 @@ export default function App() {
 
             {/* SECTOR 2: ALERTS & INTEL LEDGER */}
             <section className="w-[40%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-lg relative">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+              <div className="p-4 border-b border-gray-100 flex items-center shrink-0 bg-white">
                 <span className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Intel Ledger</span>
-                <div className="flex gap-2">
-                  <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Alerts: {articles.filter(a => a.ai.classification === 'ALERT').length}</span>
-                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Info: {articles.filter(a => a.ai.classification === 'INFORMATIVE').length}</span>
-                </div>
               </div>
               {/* Filter tabs */}
               <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/60 shrink-0">
