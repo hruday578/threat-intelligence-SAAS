@@ -8,10 +8,11 @@ import { geocodeCity, getCitiesInRadius } from './services/geoRadius';
 import Sidebar from './Sidebar';
 import MapsPage from './MapsPage';
 import EmployeesPage from './EmployeesPage';
+import RiskAssessmentPage from './RiskAssessmentPage';
 
 import { TOP_SOURCES } from './data/sources';
 
-// ─── Operational Constants ──────────────────────────────────────────────────
+//  Operational Constants 
 const TACTICAL_LIBRARY = [
   'Natural Disaster', 'Wildfire', 'Flood', 'Earthquake', 'Hurricane', 'Tornado', 'Heatwave',
   'Tsunami', 'Landslide', 'Drought', 'Blizzard', 'Avalanche', 'Volcanic Eruption',
@@ -147,7 +148,7 @@ const CONCEPT_EXPANSIONS = {
 };
 
 
-// ─── TACTICAL NEURAL PROMPT (V10 - FEW-SHOT GROUNDED) ───
+//  TACTICAL NEURAL PROMPT (V10 - FEW-SHOT GROUNDED) 
 const BATCH_CLASSIFY_PROMPT = (topic, location, expandedZones = []) => {
   const zoneList = expandedZones.length > 1
     ? `"${location}" and its surrounding zone (${expandedZones.slice(0, 8).join(', ')})`
@@ -206,7 +207,7 @@ const ENHANCED_REGIONS = {
   ]
 };
 
-// ─── Branding ──────────────────────────────────────────────────────────────
+//  Branding 
 const Logo = ({ className = "h-16" }) => (
   <img
     src="/alertem-logo.png"
@@ -215,7 +216,7 @@ const Logo = ({ className = "h-16" }) => (
   />
 );
 
-// ─── Components ──────────────────────────────────────────────────────────────
+//  Components 
 
 function MultiSelect({ label, options = [], selected = [], onChange, placeholder, disabled }) {
   const [open, setOpen] = useState(false);
@@ -280,7 +281,7 @@ function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [] }
   );
 }
 
-// ─── Source domain helpers (module-level so JSX renders can always use them) ──
+//  Source domain helpers (module-level so JSX renders can always use them) 
 const normalizeDomain = (uri) => {
   if (!uri) return '';
   return uri.toLowerCase()
@@ -356,7 +357,7 @@ function ConceptInput({ label, concepts = [], onChange }) {
             key={c.uri}
             className="bg-purple-50 border border-purple-200 text-purple-700 text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap"
           >
-            <span className="text-purple-400">◆</span> {c.label}
+            <span className="text-purple-400"></span> {c.label}
             <button
               onClick={e => { e.stopPropagation(); removeConcept(c.uri); }}
               className="ml-0.5 text-purple-400 hover:text-purple-700 leading-none"
@@ -394,7 +395,7 @@ function ConceptInput({ label, concepts = [], onChange }) {
                 onClick={addCustom}
                 className="w-full text-left px-3 py-2 text-[10px] rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
               >
-                <span className="text-purple-400 text-[8px]">◆</span>
+                <span className="text-purple-400 text-[8px]"></span>
                 <div>
                   <span className="font-black text-purple-700">{input.trim()}</span>
                   <span className="text-[8px] text-gray-400 ml-2">(add as custom concept)</span>
@@ -416,7 +417,7 @@ function ConceptInput({ label, concepts = [], onChange }) {
                       onClick={() => addConcept(c)}
                       className="w-full text-left px-4 py-2 text-[10px] hover:bg-purple-50 transition-colors flex items-center gap-2 group"
                     >
-                      <span className="text-purple-300 group-hover:text-purple-500 text-[8px] shrink-0">◆</span>
+                      <span className="text-purple-300 group-hover:text-purple-500 text-[8px] shrink-0"></span>
                       <span className="font-semibold text-gray-700 group-hover:text-purple-700">{c.label}</span>
                     </button>
                   ))}
@@ -431,7 +432,7 @@ function ConceptInput({ label, concepts = [], onChange }) {
   );
 }
 
-// ─── Search Query Bar (visual display of active filters) ──────────────────────
+//  Search Query Bar (visual display of active filters) 
 function SearchQueryBar({ keywords, concepts, locs, states, cities, cats }) {
   const allTokens = [];
 
@@ -443,10 +444,10 @@ function SearchQueryBar({ keywords, concepts, locs, states, cities, cats }) {
   if (allTokens.length === 0) return null;
 
   const colorMap = {
-    keyword:  { bg: 'bg-orange-50',  border: 'border-orange-200',  text: 'text-orange-700',  icon: '🔎' },
-    concept:  { bg: 'bg-purple-50',  border: 'border-purple-200',  text: 'text-purple-700',  icon: '◆' },
-    location: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: '📍' },
-    category: { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-700',    icon: '📂' },
+    keyword:  { bg: 'bg-orange-50',  border: 'border-orange-200',  text: 'text-orange-700',  icon: '' },
+    concept:  { bg: 'bg-purple-50',  border: 'border-purple-200',  text: 'text-purple-700',  icon: '' },
+    location: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: '' },
+    category: { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-700',    icon: '' },
   };
 
   return (
@@ -466,14 +467,14 @@ function SearchQueryBar({ keywords, concepts, locs, states, cities, cats }) {
         })}
       </div>
       <div className="flex items-center gap-3 mt-2 flex-wrap">
-        {concepts.length > 0 && <span className="text-[8px] text-purple-500 font-bold">◆ Concepts match ALL articles tagged with those Wikipedia topics</span>}
-        {keywords.length > 0 && <span className="text-[8px] text-orange-500 font-bold">🔎 Keywords match article text</span>}
+        {concepts.length > 0 && <span className="text-[8px] text-purple-500 font-bold"> Concepts match ALL articles tagged with those Wikipedia topics</span>}
+        {keywords.length > 0 && <span className="text-[8px] text-orange-500 font-bold"> Keywords match article text</span>}
       </div>
     </div>
   );
 }
 
-// ─── Main Application ────────────────────────────────────────────────────────
+//  Main Application 
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -497,6 +498,7 @@ export default function App() {
   const [expandedZones, setExpandedZones] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [ledgerFilter, setLedgerFilter] = useState('ALL');
   const [employees, setEmployees] = useState(() => {
     try { return JSON.parse(localStorage.getItem('alertem_employees') || '[]'); } catch { return []; }
   });
@@ -549,7 +551,7 @@ export default function App() {
 
     const activeZones = zonesInput.split(',').map(z => z.trim()).filter(Boolean);
 
-    // ─── RADIUS EXPANSION ────────────────────────────────────────────────────
+    //  RADIUS EXPANSION 
     let expandedZoneKeywords = [...activeZones];
     // Determine the best available location name for geocoding:
     // Priority: Target Zones input > City dropdown > State dropdown > Country dropdown
@@ -560,15 +562,15 @@ export default function App() {
       || null;
 
     if (radius > 0 && geocodeTarget) {
-      setError('📡 Expanding radius zone — geocoding...');
+      setError(' Expanding radius zone — geocoding...');
       const geo = await geocodeCity(geocodeTarget);
       if (geo) {
-        setError(`📡 Finding cities within ${radius}km of ${geocodeTarget}...`);
+        setError(` Finding cities within ${radius}km of ${geocodeTarget}...`);
         const nearbyCities = await getCitiesInRadius(geo.lat, geo.lon, radius);
         expandedZoneKeywords = [...new Set([...activeZones, ...nearbyCities])];
         setExpandedZones(expandedZoneKeywords);
       } else {
-        setError(`⚠️ Could not geocode "${geocodeTarget}" — using exact name only.`);
+        setError(` Could not geocode "${geocodeTarget}" — using exact name only.`);
         await new Promise(r => setTimeout(r, 1500));
       }
     } else {
@@ -703,7 +705,7 @@ export default function App() {
 
       let raw = [];
       if (params.prefSrc && params.prefSrc.length > 0) {
-        // ✅ sourceUri inside $query/$or is the correct EventRegistry syntax for POST requests
+        //  sourceUri inside $query/$or is the correct EventRegistry syntax for POST requests
         const srcFilter = { "$or": params.prefSrc.map(s => ({ "sourceUri": s.uri })) };
         const prefParts = [...queryParts, srcFilter];
         // genRes EXCLUDES preferred sources with $not — ensures Other Sources always has articles
@@ -715,13 +717,13 @@ export default function App() {
         ]);
         const prefArticles = prefRes?.articles?.results || [];
         const genArticles  = genRes?.articles?.results  || [];
-        console.log(`✅ Preferred: ${prefArticles.length} | Other sources: ${genArticles.length}`);
+        console.log(` Preferred: ${prefArticles.length} | Other sources: ${genArticles.length}`);
         if (prefArticles.length > 0) {
           console.log('Preferred source URIs sample:', prefArticles.slice(0, 3).map(a => a.source?.uri));
           console.log('Other source URIs sample:', genArticles.slice(0, 3).map(a => a.source?.uri));
         }
         if (prefArticles.length === 0) {
-          setError(`⚠️ No articles from ${params.prefSrc.map(s=>s.label||s.uri).join(', ')} for this query. Showing all sources.`);
+          setError(` No articles from ${params.prefSrc.map(s=>s.label||s.uri).join(', ')} for this query. Showing all sources.`);
           await new Promise(r => setTimeout(r, 2500));
           setError('');
           raw = genArticles;
@@ -966,6 +968,7 @@ export default function App() {
           />
         )}
         {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} />}
+        {activePage === 'risk-assessment' && <RiskAssessmentPage articles={articles} />}
         {activePage === 'dashboard' && <>
           <header className="px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-6">
@@ -986,7 +989,7 @@ export default function App() {
                     onClick={() => setConfigExpanded(!configExpanded)}
                     className="ml-3 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
                   >
-                    {configExpanded ? 'Collapse Config ▴' : 'Expand Config ▾'}
+                    {configExpanded ? 'Collapse Config ' : 'Expand Config '}
                   </button>
                 </div>
                 <div className="flex gap-4 items-center">
@@ -1012,7 +1015,7 @@ export default function App() {
                 <>
                   <div className="flex items-start gap-4 flex-wrap">
                     <TagInput label="Target Hazards" tags={keywords} onAdd={t => setKeywords([...new Set([...keywords, t])])} onRemove={t => setKeywords(keywords.filter(k => k !== t))} suggestionsLibrary={TACTICAL_LIBRARY} />
-                    <ConceptInput label="◆ Concepts" concepts={params.concepts} onChange={v => setParams(p => ({ ...p, concepts: v }))} />
+                    <ConceptInput label=" Concepts" concepts={params.concepts} onChange={v => setParams(p => ({ ...p, concepts: v }))} />
                     <MultiSelect label="Preferred Source" options={TOP_SOURCES} selected={params.prefSrc} onChange={v => setParams(p => ({ ...p, prefSrc: v }))} placeholder="Any Source" />
                     <MultiSelect label="Categories" options={CURATED_CATEGORIES} selected={params.cats} onChange={v => setParams(p => ({ ...p, cats: v }))} placeholder="All Sectors" />
                     <MultiSelect label="Country" options={countryList} selected={params.locs} onChange={v => setParams(p => ({ ...p, locs: v }))} placeholder="Global" />
@@ -1031,9 +1034,9 @@ export default function App() {
                         onChange={e => setSortBy(e.target.value)}
                         className="h-10 w-full bg-white border border-gray-100 text-[10px] font-black rounded-xl px-3 outline-none cursor-pointer"
                       >
-                        <option value="date">📅 Date</option>
-                        <option value="rel">⭐ Relevance</option>
-                        <option value="socialScore">📣 Social Shares</option>
+                        <option value="date"> Date</option>
+                        <option value="rel"> Relevance</option>
+                        <option value="socialScore"> Social Shares</option>
                       </select>
                     </div>
                     <div className="w-56">
@@ -1042,7 +1045,7 @@ export default function App() {
                     </div>
                     <div className="w-36">
                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">
-                        Search Radius (km) {radius > 0 && <span className="text-red-600">● {radius}km</span>}
+                        Search Radius (km) {radius > 0 && <span className="text-red-600"> {radius}km</span>}
                       </label>
                       <input
                         id="radius-input"
@@ -1125,7 +1128,7 @@ export default function App() {
                       <div className="px-3 py-2 border-b border-red-50 flex justify-between items-center bg-red-50/60">
                         <div>
                           <h3 className="text-[11px] font-semibold text-red-700 uppercase tracking-widest">
-                            {params.prefSrc?.length > 0 ? '⭐ Preferred Sources' : 'Authentic Resources'}
+                            {params.prefSrc?.length > 0 ? ' Preferred Sources' : 'Authentic Resources'}
                           </h3>
                           {params.prefSrc?.length > 0 && (
                             <p className="text-[11px] font-semibold text-red-400 mt-0.5">
@@ -1262,8 +1265,38 @@ export default function App() {
                   <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">Info: {articles.filter(a => a.ai.classification === 'INFORMATIVE').length}</span>
                 </div>
               </div>
+              {/* Filter tabs */}
+              <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/60 shrink-0">
+                {[
+                  { key: 'ALL',         label: 'All',    count: articles.length,                                                       cls: 'bg-gray-800 text-white',          inactiveCls: 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400' },
+                  { key: 'ALERT',       label: 'Alerts', count: articles.filter(a => a.ai.classification === 'ALERT').length,         cls: 'bg-red-600 text-white',           inactiveCls: 'bg-red-50 text-red-500 border border-red-100 hover:border-red-400' },
+                  { key: 'INFORMATIVE', label: 'Info',   count: articles.filter(a => a.ai.classification === 'INFORMATIVE').length,   cls: 'bg-blue-600 text-white',          inactiveCls: 'bg-blue-50 text-blue-500 border border-blue-100 hover:border-blue-400' },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => { setLedgerFilter(f.key); setSelectedIdx(null); }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      ledgerFilter === f.key ? f.cls : f.inactiveCls
+                    }`}
+                  >
+                    {f.label}
+                    <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black ${
+                      ledgerFilter === f.key ? 'bg-white/25 text-inherit' : 'bg-gray-100 text-gray-500'
+                    }`}>{f.count}</span>
+                  </button>
+                ))}
+              </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/30">
-                {articles.map((art, i) => {
+                {(() => {
+                  const visible = ledgerFilter === 'ALL' ? articles : articles.filter(a => a.ai.classification === ledgerFilter);
+                  if (visible.length === 0) return (
+                    <div className="h-full flex flex-col items-center justify-center opacity-30 grayscale">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                        {articles.length === 0 ? 'No Articles Detected' : `No ${ledgerFilter === 'ALERT' ? 'Alert' : 'Info'} Articles`}
+                      </p>
+                    </div>
+                  );
+                  return visible.map((art, i) => {
                   const isAlert = art.ai.classification === 'ALERT';
                   const isInfo = art.ai.classification === 'INFORMATIVE';
                   const isSelected = selectedIdx === articles.indexOf(art);
@@ -1299,7 +1332,7 @@ export default function App() {
                                   ? 'bg-amber-50 text-amber-700 border-amber-200'
                                   : 'bg-gray-50 text-gray-500 border-gray-200'
                               }`}>
-                                {hasPreferred && '⭐ '}{sourceText}
+                                {hasPreferred && ' '}{sourceText}
                               </span>
                             );
                           })()}
@@ -1343,19 +1376,15 @@ export default function App() {
                                     : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-700 hover:text-white hover:border-gray-700'
                               }`}
                             >
-                              Read More ↗
+                              Read More 
                             </a>
                           )}
                         </div>
                       </div>
                     </div>
                   );
-                })}
-                {articles.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center opacity-30 grayscale">
-                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">No Articles Detected</p>
-                  </div>
-                )}
+                });
+                })()}
               </div>
             </section>
 
@@ -1410,7 +1439,7 @@ export default function App() {
                               </ul>
                             ) : (
                               <div className="px-4 py-6 text-center bg-white">
-                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
+                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest"> Awaiting detailed analysis from AI model</p>
                                 <p className="text-[11px] font-semibold text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
                               </div>
                             );
@@ -1438,7 +1467,7 @@ export default function App() {
                               </ul>
                             ) : (
                               <div className="px-4 py-6 text-center bg-white">
-                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">⏳ Awaiting detailed analysis from AI model</p>
+                                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest"> Awaiting detailed analysis from AI model</p>
                                 <p className="text-[11px] font-semibold text-gray-300 mt-1">Try switching to a more capable provider (e.g. GROQ 70B or DeepSeek)</p>
                               </div>
                             );
