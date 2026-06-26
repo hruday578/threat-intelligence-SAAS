@@ -1245,12 +1245,134 @@ export default function App() {
                         </div>
                       );
                     })()}
-
                   </>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center opacity-40 grayscale">
-                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center">Select an Alert<br />to view resources</p>
-                  </div>
+                  <>
+                    {/* Context label */}
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-1">
+                      {ledgerFilter === 'ALL' ? 'Sources for all articles' : ledgerFilter === 'ALERT' ? 'Sources for all alerts' : 'Sources for all info'}
+                    </p>
+
+                    {/* Authentic/Preferred Resources Card */}
+                    {(() => {
+                      const targetArticles = ledgerFilter === 'ALL' ? articles : articles.filter(a => a.ai.classification === ledgerFilter);
+                      const prefSources = targetArticles.flatMap(a => a.sources.filter(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))));
+                      
+                      const seenPref = new Set();
+                      const uniquePref = [];
+                      prefSources.forEach(s => {
+                        const key = s.title?.toLowerCase().trim();
+                        if (key && !seenPref.has(key)) {
+                          seenPref.add(key);
+                          uniquePref.push(s);
+                        }
+                      });
+
+                      return (
+                        <div className="bg-white border border-red-100 rounded-2xl overflow-hidden shadow-sm">
+                          <div className="px-3 py-2 border-b border-red-50 flex justify-between items-center bg-red-50/60">
+                            <div>
+                              <h3 className="text-[11px] font-semibold text-red-700 uppercase tracking-widest">
+                                {params.prefSrc?.length > 0 ? ' Preferred Sources' : 'Authentic Resources'}
+                              </h3>
+                              {params.prefSrc?.length > 0 && (
+                                <p className="text-[11px] font-semibold text-red-400 mt-0.5">
+                                  {params.prefSrc.map(ps => ps.label || ps.uri).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-semibold text-red-500 bg-white px-2 py-0.5 rounded-lg border border-red-100">
+                              {uniquePref.length} articles
+                            </span>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            {params.prefSrc?.length === 0 ? (
+                              <div className="p-3 text-center text-[11px] font-semibold text-gray-400">
+                                Select a preferred source to see filtered results
+                              </div>
+                            ) : uniquePref.length > 0 ? (
+                              uniquePref.map((src, si) => (
+                                <a key={`auth-all-${si}`} href={src.url} target="_blank" rel="noopener noreferrer"
+                                  className="block p-2.5 rounded-xl hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[11px] font-semibold uppercase tracking-widest bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md">
+                                      {src.source?.title || src.source?.uri || 'Source'}
+                                    </span>
+                                    {src.date && (
+                                      <span className="text-[11px] font-semibold text-gray-400">{src.date}</span>
+                                    )}
+                                  </div>
+                                  <h4 className="text-[11px] font-semibold text-gray-800 leading-snug line-clamp-2">
+                                    {src.title}
+                                  </h4>
+                                </a>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center">
+                                <p className="text-[11px] font-semibold text-gray-400">No articles from preferred sources</p>
+                                <p className="text-[11px] font-semibold text-gray-300 mt-1">for this filter</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Other Sources Card */}
+                    {(() => {
+                      const targetArticles = ledgerFilter === 'ALL' ? articles : articles.filter(a => a.ai.classification === ledgerFilter);
+                      const otherSources = targetArticles.flatMap(a => a.sources.filter(s => !params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))));
+                      
+                      const seenOther = new Set();
+                      const uniqueOther = [];
+                      otherSources.forEach(s => {
+                        const key = s.title?.toLowerCase().trim();
+                        if (key && !seenOther.has(key)) {
+                          seenOther.add(key);
+                          uniqueOther.push(s);
+                        }
+                      });
+
+                      const renderArticle = (src, si) => (
+                        <a key={`other-all-${si}`} href={src.url} target="_blank" rel="noopener noreferrer"
+                          className="block p-2.5 rounded-xl transition-colors border border-transparent hover:bg-gray-50 hover:border-gray-100">
+                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                            <span className="text-[11px] font-semibold uppercase tracking-widest bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md">
+                              {src.source?.title || src.source?.uri || 'Source'}
+                            </span>
+                            {src.date && <span className="text-[11px] font-semibold text-gray-400">{src.date}</span>}
+                          </div>
+                          <h4 className="text-[11px] font-semibold text-gray-700 leading-snug line-clamp-2">{src.title}</h4>
+                        </a>
+                      );
+
+                      return (
+                        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                          <div className="px-3 py-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/80">
+                            <div>
+                              <h3 className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest">Other Sources</h3>
+                              {params.prefSrc?.length > 0 && (
+                                <p className="text-[11px] font-semibold text-gray-400 mt-0.5">All non-preferred articles</p>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-semibold text-gray-400 bg-white px-2 py-0.5 rounded-lg border border-gray-100">
+                              {uniqueOther.length} articles
+                            </span>
+                          </div>
+                          <div className="p-2 space-y-1 max-h-[420px] overflow-y-auto">
+                            {uniqueOther.length === 0 ? (
+                              <div className="p-4 text-center">
+                                <p className="text-[11px] font-semibold text-gray-400">No other articles found</p>
+                                <p className="text-[11px] font-semibold text-gray-300 mt-1">All results are from preferred sources</p>
+                              </div>
+                            ) : (
+                              uniqueOther.map((src, si) => renderArticle(src, si))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
                 )}
               </div>
             </section>
@@ -1270,7 +1392,10 @@ export default function App() {
                 ].map(f => (
                   <button
                     key={f.key}
-                    onClick={() => { setLedgerFilter(f.key); setSelectedIdx(null); }}
+                    onClick={() => {
+                      setLedgerFilter(f.key);
+                      setSelectedIdx(null);
+                    }}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                       ledgerFilter === f.key ? f.cls : f.inactiveCls
                     }`}
