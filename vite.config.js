@@ -11,6 +11,10 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
       // Restored the Deep-Proxy Tunnel
       '/news-proxy': {
         target: 'https://newsapi.ai',

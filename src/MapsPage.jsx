@@ -966,6 +966,25 @@ export default function MapsPage({
     });
   };
 
+  const sendBroadcast = async (threat, employeesToNotify) => {
+    try {
+      const response = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threat, employees: employeesToNotify }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert(`Broadcast sent! Preview URL: ${data.previewUrl || 'Check your SMTP inbox'}`);
+      } else {
+        alert(`Failed to send broadcast: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Broadcast failed:', error);
+      alert('Failed to send broadcast. Is the backend server running?');
+    }
+  };
+
   // 10. Handler to deploy analyst-placed custom threats
   const handlePlotCustomThreat = () => {
     if (!placementCoords) return;
@@ -1287,7 +1306,7 @@ export default function MapsPage({
                                 e.stopPropagation();
                                 pushToEmployee(emp.closestAlert.id, emp.id);
                                 onPushAlert(emp.closestAlert.id);
-                                alert(`Push Alert sent successfully to ${emp.firstName} ${emp.lastName}'s registered devices.`);
+                                sendBroadcast(emp.closestAlert, [emp]);
                               }}
                               className="emp-push-btn"
                             >
@@ -1650,7 +1669,12 @@ export default function MapsPage({
                           <button
                             onClick={() => {
                               onPushAlert(activePopup.id);
-                              alert('Simulated push broadcast dispatched to all employees in the area.');
+                              const affectedEmployees = highRiskEmployees.filter(emp => emp.closestAlert?.id === activePopup.id);
+                              if (affectedEmployees.length > 0) {
+                                sendBroadcast(activePopup, affectedEmployees);
+                              } else {
+                                alert('No employees are currently in the high-risk zone for this alert.');
+                              }
                             }}
                             className="maps-popup-push-btn"
                           >
@@ -1678,7 +1702,7 @@ export default function MapsPage({
                             onClick={() => {
                               pushToEmployee(activePopup.closestAlert.id, activePopup.id);
                               onPushAlert(activePopup.closestAlert.id);
-                              alert(`Tactical alert dispatched directly to ${activePopup.firstName}'s phone.`);
+                              sendBroadcast(activePopup.closestAlert, [activePopup]);
                             }}
                             className="maps-popup-push-btn"
                             style={{ width: '100%', marginTop: '6px', background: '#e53e3e' }}
