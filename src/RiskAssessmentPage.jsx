@@ -76,6 +76,45 @@ function resolveCoords(city, country) {
   return key ? CITY_COORDS[key] : null;
 }
 
+function resolveThreatCoords(t) {
+  const parts = (t.ai?.region || '').split(',').map(p => p.trim());
+  for (const p of parts) {
+    const coords = resolveCoords(p, p);
+    if (coords) return coords;
+  }
+  return null;
+}
+
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function checkThreatMatch(loc, threat) {
+  const locCoords = resolveCoords(loc.city, loc.country);
+  const threatCoords = resolveThreatCoords(threat);
+  
+  if (locCoords && threatCoords) {
+    const dist = getHaversineDistance(locCoords[0], locCoords[1], threatCoords[0], threatCoords[1]);
+    const radius = loc.radius !== undefined && loc.radius !== '' ? parseInt(loc.radius) : 100;
+    return dist <= radius;
+  }
+  
+  // Fallback to string matching
+  const reg = (threat.ai?.region || '').toLowerCase();
+  return (
+    (loc.city && reg.includes(loc.city.toLowerCase())) ||
+    (loc.country && reg.includes(loc.country.toLowerCase()))
+  );
+}
+
 // Leaflet auto-fit bounds
 function FitBounds({ points }) {
   const map = useMap();
@@ -146,7 +185,7 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
   const locPoints = (locations || []).map(loc => ({
     ...loc,
     coords: resolveCoords(loc.city, loc.country),
-    threatened: isThreatened(loc.city, loc.country),
+    threatened: (threats || []).some(t => checkThreatMatch(loc, t)),
   })).filter(l => l.coords);
 
   const vendPoints = (vendors || []).map(v => ({
@@ -237,6 +276,7 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
           {locPoints.map((loc, i) => {
             const col = loc.threatened ? '#ef4444' : (critColor[loc.criticality] || '#3b82f6');
             const arcPts = hqCoords ? geodesicArc(hqCoords, loc.coords, 48) : null;
+            const rVal = loc.radius !== undefined && loc.radius !== '' ? parseInt(loc.radius) : 100;
             return (
               <React.Fragment key={'loc' + i}>
                 {arcPts && (
@@ -245,6 +285,17 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
                     pathOptions={{ color: col, weight: loc.criticality === 'High' ? 2.2 : 1.6, opacity: 0.75, dashArray: loc.threatened ? '4 4' : undefined }}
                   />
                 )}
+                <Circle
+                  center={loc.coords}
+                  radius={rVal * 1000}
+                  pathOptions={{
+                    color: col,
+                    fillColor: col,
+                    fillOpacity: 0.04,
+                    weight: 1,
+                    dashArray: '3, 4'
+                  }}
+                />
                 <Marker position={loc.coords} icon={makeIcon(col, 14, loc.threatened)}>
                   <Popup>
                     <div style={{ minWidth: 160, fontFamily: 'sans-serif' }}>
@@ -344,11 +395,14 @@ const STEPS = [
 
 const EMPTY_PROFILE = {
   company_name: '', industry: '', hq_country: '', hq_city: '',
+  hq_address_line1: '', hq_address_line2: '', hq_area: '',
+  hq_state: '', hq_pincode: '',
+  hq_lat: '', hq_lng: '',
   num_employees: '', annual_revenue: '',
   critical_apps: '', key_systems: [], mfa_implemented: false,
   backup_strategy: 'None', cloud_providers: [],
 };
-const EMPTY_LOCATION = { country: '', city: '', location_type: 'Branch', criticality: 'Medium', notes: '' };
+const EMPTY_LOCATION = { country: '', city: '', location_type: 'Branch', headcount: '', radius: 100, criticality: 'Medium', notes: '' };
 const EMPTY_VENDOR   = { vendor_name: '', vendor_country: '', vendor_city: '', goods: [], dependency_level: 'Important', single_source: false, notes: '' };
 
 const STORAGE_KEY = 'alertem_risk_profiles';
@@ -656,11 +710,10 @@ export default function RiskAssessmentPage({ articles = [] }) {
 
   const riskScore = computeRiskScore(profile, locations, vendors);
 
-  // Threat correlations from Dashboard articles
   const activeThreats = (articles || []).filter(a =>
-    a.ai?.classification === 'ALERT' &&
-    [...locations, ...vendors].some(item =>
-      regionMatchesText(a.ai.region, item.city || '', item.country || '')
+    a.ai?.classification === 'ALERT' && (
+      locations.some(item => checkThreatMatch(item, a)) ||
+      vendors.some(item => regionMatchesText(a.ai?.region || '', item.vendor_city || '', item.vendor_country || ''))
     )
   );
 
@@ -908,6 +961,83 @@ function StepProfile({ profile, setP }) {
             <input className="ra-input" type="number" min="0" value={profile.annual_revenue} onChange={e => setP('annual_revenue', e.target.value)} placeholder="e.g. 25000000" />
           </div>
         </div>
+
+        {/* ── Registered Office / HQ Address ── */}
+        <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e5e7eb' }}>
+          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9ca3af', marginBottom: 14 }}>
+            📍 Registered Office / HQ Address
+          </p>
+          <div className="ra-fields-grid">
+            <div className="ra-field">
+              <label className="ra-label">Flat / Unit / Building No.</label>
+              <input
+                className="ra-input"
+                value={profile.hq_address_line1}
+                onChange={e => setP('hq_address_line1', e.target.value)}
+                placeholder="e.g. Unit 12, Tower B"
+              />
+            </div>
+            <div className="ra-field ra-field--lg">
+              <label className="ra-label">Street / Road Name</label>
+              <input
+                className="ra-input"
+                value={profile.hq_address_line2}
+                onChange={e => setP('hq_address_line2', e.target.value)}
+                placeholder="e.g. Sheikh Zayed Road"
+              />
+            </div>
+            <div className="ra-field">
+              <label className="ra-label">Area / Locality / District</label>
+              <input
+                className="ra-input"
+                value={profile.hq_area}
+                onChange={e => setP('hq_area', e.target.value)}
+                placeholder="e.g. Business Bay"
+              />
+            </div>
+            <div className="ra-field">
+              <label className="ra-label">State / Emirate / Province</label>
+              <input
+                className="ra-input"
+                value={profile.hq_state}
+                onChange={e => setP('hq_state', e.target.value)}
+                placeholder="e.g. Maharashtra / Dubai"
+              />
+            </div>
+            <div className="ra-field">
+              <label className="ra-label">PIN Code / ZIP / PO Box</label>
+              <input
+                className="ra-input"
+                value={profile.hq_pincode}
+                onChange={e => setP('hq_pincode', e.target.value)}
+                placeholder="e.g. 500001 or PO Box 12345"
+                maxLength={12}
+              />
+            </div>
+            <div className="ra-field">
+              <label className="ra-label">Latitude</label>
+              <input
+                className="ra-input"
+                type="number"
+                step="any"
+                value={profile.hq_lat}
+                onChange={e => setP('hq_lat', e.target.value)}
+                placeholder="e.g. 25.2048"
+              />
+            </div>
+            <div className="ra-field">
+              <label className="ra-label">Longitude</label>
+              <input
+                className="ra-input"
+                type="number"
+                step="any"
+                value={profile.hq_lng}
+                onChange={e => setP('hq_lng', e.target.value)}
+                placeholder="e.g. 55.2708"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="ra-section-card ra-section-card--full">
@@ -954,9 +1084,8 @@ function StepProfile({ profile, setP }) {
 // 
 function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLocIdx, setEditLocIdx, openAddLoc, openEditLoc, saveLoc, activeThreats }) {
   const setLD = (k, v) => setLocDraft(d => ({ ...d, [k]: v }));
-  const threatRegions = activeThreats.map(t => (t.ai?.region || '').toLowerCase());
   const isLocThreatened = (loc) =>
-    threatRegions.some(r => (loc.city && r.includes(loc.city.toLowerCase())) || (loc.country && r.includes(loc.country.toLowerCase())));
+    activeThreats.some(t => checkThreatMatch(loc, t));
 
   return (
     <div className="ra-form-grid">
@@ -982,10 +1111,18 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                 <input className="ra-input" value={locDraft.city} onChange={e => setLD('city', e.target.value)} placeholder="e.g. Riyadh" />
               </div>
               <div className="ra-field">
-                <label className="ra-label">Location Type</label>
+                <label className="ra-label">Type of Operation</label>
                 <select className="ra-select" value={locDraft.location_type} onChange={e => setLD('location_type', e.target.value)}>
                   {LOCATION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
+              </div>
+              <div className="ra-field">
+                <label className="ra-label">Headcount</label>
+                <input className="ra-input" type="number" min="0" value={locDraft.headcount || ''} onChange={e => setLD('headcount', e.target.value)} placeholder="e.g. 150" />
+              </div>
+              <div className="ra-field">
+                <label className="ra-label">Warning Radius (km)</label>
+                <input className="ra-input" type="number" min="1" value={locDraft.radius || ''} onChange={e => setLD('radius', e.target.value)} placeholder="e.g. 100" />
               </div>
               <div className="ra-field">
                 <label className="ra-label">Criticality</label>
@@ -1024,7 +1161,7 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
             <table className="ra-table">
               <thead>
                 <tr>
-                  <th>Country</th><th>City</th><th>Type</th><th>Criticality</th><th>Threats</th><th>Notes</th><th></th>
+                  <th>Country</th><th>City</th><th>Type</th><th>Headcount</th><th>Radius</th><th>Criticality</th><th>Threats</th><th>Notes</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -1035,6 +1172,8 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                       <td>{loc.country}</td>
                       <td>{loc.city || '—'}</td>
                       <td><span className="ra-type-badge">{loc.location_type}</span></td>
+                      <td>{loc.headcount !== undefined && loc.headcount !== '' ? Number(loc.headcount).toLocaleString() : '—'}</td>
+                      <td>{loc.radius !== undefined && loc.radius !== '' ? `${loc.radius} km` : '100 km'}</td>
                       <td><span className={`ra-crit-badge ra-crit-badge--${loc.criticality.toLowerCase()}`}>{loc.criticality}</span></td>
                       <td>
                         {threatened
@@ -1304,7 +1443,7 @@ function StepSummary({ profile, locations, vendors, riskScore, activeThreats }) 
   // Location Risk Matrix — rows=locations, find matching threats
   const locationMatrix = locations.map(loc => {
     const threats = activeThreats.filter(a =>
-      regionMatchesText(a.ai?.region, loc.city, loc.country)
+      checkThreatMatch(loc, a)
     );
     return { ...loc, threats };
   });
@@ -1327,6 +1466,51 @@ function StepSummary({ profile, locations, vendors, riskScore, activeThreats }) 
         </div>
         <div className="ra-score-body">
           <RiskScoreRing score={riskScore} />
+          
+          {/* Risk Reference Ranges */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            fontSize: '11px',
+            minWidth: '170px',
+            padding: '14px',
+            background: '#f8fafc',
+            borderRadius: '14px',
+            border: '1px solid #e2e8f0',
+            flexShrink: 0
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Risk Ranges</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#ef4444' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                Critical
+              </span>
+              <span style={{ color: '#64748b', fontWeight: '700' }}>70 – 100</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#f97316' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f97316' }} />
+                High
+              </span>
+              <span style={{ color: '#64748b', fontWeight: '700' }}>45 – 69</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#eab308' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }} />
+                Moderate
+              </span>
+              <span style={{ color: '#64748b', fontWeight: '700' }}>25 – 44</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: '#22c55e' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
+                Low
+              </span>
+              <span style={{ color: '#64748b', fontWeight: '700' }}>0 – 24</span>
+            </div>
+          </div>
+
           <div className="ra-score-breakdown">
             <div className="ra-breakdown-item">
               <span>Single-source vendors</span>
@@ -1446,6 +1630,7 @@ function StepSummary({ profile, locations, vendors, riskScore, activeThreats }) 
                 <tr>
                   <th>Location</th>
                   <th>Type</th>
+                  <th>Headcount</th>
                   <th>Criticality</th>
                   <th>Active Threats</th>
                   <th>Hazard Types</th>
@@ -1469,6 +1654,7 @@ function StepSummary({ profile, locations, vendors, riskScore, activeThreats }) 
                     <tr key={i} style={{ background: loc.threats.length > 0 ? 'rgba(239,68,68,0.04)' : undefined }}>
                       <td><strong>{loc.city || '—'}</strong><br/><span style={{ fontSize: 11, opacity: 0.5 }}>{loc.country}</span></td>
                       <td><span className="ra-type-badge">{loc.location_type}</span></td>
+                      <td>{loc.headcount !== undefined && loc.headcount !== '' ? Number(loc.headcount).toLocaleString() : '—'}</td>
                       <td><span className={`ra-crit-badge ra-crit-badge--${loc.criticality.toLowerCase()}`}>{loc.criticality}</span></td>
                       <td style={{ textAlign: 'center' }}>
                         {loc.threats.length > 0

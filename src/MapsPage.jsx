@@ -877,26 +877,44 @@ export default function MapsPage({
     setCountdown(autoPilotInterval * 60);
   };
 
-  // 7. Proximity Alerts (distance between employees and threats based on slider)
-  // Dynamic warning excludes Global threats which are in the ocean (to avoid false positives)
+  // 7. Country-based Alerts — employee is HIGH RISK if any active alert is in the SAME COUNTRY
+  // (e.g. alert in Mumbai → employee in Bangalore → both are India → HIGH RISK)
   const activeAlerts = markers.filter(m => m.ai?.classification === 'ALERT' && !m._isGlobal);
 
   const employeesWithRisk = employeeMarkers.map(emp => {
+    // Resolve employee's country name from their country code
+    const empCountryName = (COUNTRIES.find(c => c.code === emp.country)?.name || emp.country || '').toLowerCase();
+
+    // Find all alerts in the same country as the employee
+    const countryAlerts = activeAlerts.filter(alert => {
+      const alertCountry = (extractCountry(alert.ai?.region || '') || '').toLowerCase();
+      return alertCountry && empCountryName && (
+        alertCountry === empCountryName ||
+        alertCountry.includes(empCountryName) ||
+        empCountryName.includes(alertCountry)
+      );
+    });
+
+    // Also compute the closest alert by distance (kept for display purposes)
     let closestAlert = null;
     let minDistance = Infinity;
-
     activeAlerts.forEach(alert => {
-      const dist = getHaversineDistance(emp.lat, emp.lon, alert.lat, alert.lon);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestAlert = alert;
+      if (emp.lat && emp.lon && alert.lat && alert.lon) {
+        const dist = getHaversineDistance(emp.lat, emp.lon, alert.lat, alert.lon);
+        if (dist < minDistance) { minDistance = dist; closestAlert = alert; }
       }
     });
 
+    // If any alert is in the same country → HIGH RISK
+    const isCountryRisk = countryAlerts.length > 0;
+    // Use the first country-matching alert as the "closest" for notification purposes
+    const primaryAlert = isCountryRisk ? countryAlerts[0] : closestAlert;
+
     return {
       ...emp,
-      riskLevel: minDistance <= warnRadius ? 'HIGH' : 'NORMAL',
-      closestAlert,
+      riskLevel: isCountryRisk ? 'HIGH' : 'NORMAL',
+      closestAlert: primaryAlert,
+      countryAlerts,             // all alerts in their country
       distanceToAlert: minDistance
     };
   });
@@ -1298,7 +1316,7 @@ export default function MapsPage({
                             </div>
                           </div>
                           <div className="emp-risk-desc">
-                            Located <strong>{Math.round(emp.distanceToAlert)}km</strong> from an active {emp.closestAlert.ai?.hazard} warning.
+                            Active <strong>{emp.closestAlert?.ai?.hazard || 'threat'} alert</strong> detected in <strong>{extractCountry(emp.closestAlert?.ai?.region || '') || 'your country'}</strong> — employee may be at risk.
                           </div>
                           <div className="emp-action-footer">
                             <button
@@ -1365,23 +1383,6 @@ export default function MapsPage({
                 <div className="settings-section">
                   <h4 className="settings-title">Map Controls</h4>
                   
-                  {/* Warning Radius Slider */}
-                  <div className="slider-container" style={{ margin: '8px 0 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      <span>Warning Radius</span>
-                      <span style={{ color: '#ef4444' }}>{warnRadius} km</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="25" 
-                      max="500" 
-                      step="25" 
-                      value={warnRadius} 
-                      onChange={e => setWarnRadius(parseInt(e.target.value))} 
-                      style={{ width: '100%', accentColor: '#ef4444' }}
-                    />
-                  </div>
-
                   {/* Sound Effect Toggle */}
                   <label className="checkbox-label" style={{ marginBottom: '12px' }}>
                     <input type="checkbox" checked={enableSound} onChange={e => setEnableSound(e.target.checked)} />

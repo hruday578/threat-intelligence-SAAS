@@ -37,4 +37,17 @@ export const TOP_SOURCES = [
   { label: '🌍 Khaleej Times',        uri: 'khaleejtimes.com' },
   { label: '🌍 Arab News',            uri: 'arabnews.com' },
   { label: '🌍 The National (UAE)',    uri: 'thenationalnews.com' },
+
+  // ── Government Alert & Emergency Sites ──────────────────────────────────────
+  { label: '🏛️ NDMA India (Disaster Management)', uri: 'ndma.gov.in' },
+  { label: '🏛️ IMD India (Weather Alerts)',     uri: 'imd.gov.in' },
+  { label: '🏛️ FEMA USA (Emergency Management)', uri: 'fema.gov' },
+  { label: '🏛️ NOAA NWS USA (Weather Alerts)',  uri: 'weather.gov' },
+  { label: '🏛️ USGS (Earthquake & Volcano Alerts)', uri: 'usgs.gov' },
+  { label: '🏛️ NCEMA UAE (Emergency Management)', uri: 'ncema.gov.ae' },
+  { label: '🏛️ Saudi Civil Defense',           uri: '998.gov.sa' },
+  { label: '🏛️ Oman CAA (Meteorology & Alerts)', uri: 'caa.gov.om' },
+  { label: '🏛️ Met Office UK (Weather Alerts)',  uri: 'metoffice.gov.uk' },
+  { label: '🏛️ WHO (Global Health Alerts)',     uri: 'who.int' },
+  { label: '🏛️ GDACS (Global Disaster Alerts)',  uri: 'gdacs.org' },
 ];

@@ -37,9 +37,18 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    id: 'system-logs',
+    label: 'System Logs',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+  },
 ];
 
-export default function Sidebar({ activePage, onNavigate, collapsed, onToggle }) {
+export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, errorCount = 0 }) {
   return (
     <aside
       className="sidebar-root"
@@ -77,6 +86,7 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle })
       <nav className="sidebar-nav">
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id;
+          const isLogs = item.id === 'system-logs';
           return (
             <button
               key={item.id}
@@ -84,8 +94,22 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle })
               className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item--active' : ''}`}
               title={collapsed ? item.label : undefined}
             >
-              <div className="sidebar-nav-icon">{item.icon}</div>
-              {!collapsed && <span className="sidebar-nav-label">{item.label}</span>}
+              <div className="sidebar-nav-icon relative">
+                {item.icon}
+                {isLogs && errorCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border border-slate-900 animate-pulse" />
+                )}
+              </div>
+              {!collapsed && (
+                <div className="flex-1 flex items-center justify-between min-w-0 pr-2">
+                  <span className="sidebar-nav-label truncate">{item.label}</span>
+                  {isLogs && errorCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[8px] font-black rounded-full bg-red-600 text-white">
+                      {errorCount}
+                    </span>
+                  )}
+                </div>
+              )}
               {isActive && <div className="sidebar-nav-active-bar" />}
             </button>
           );
