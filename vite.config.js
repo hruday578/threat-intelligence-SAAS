@@ -20,7 +20,18 @@ export default defineConfig({
         target: 'https://newsapi.ai',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => '/api/v1/article/getArticles'
+        timeout: 20000,
+        proxyTimeout: 20000,
+        rewrite: (path) => '/api/v1/article/getArticles',
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, req, res) => {
+            console.warn('[vite-proxy] Proxy connection issue on newsapi.ai:', err.message);
+            if (res && !res.headersSent) {
+              res.writeHead(504, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'News API proxy request timed out or failed to connect.' }));
+            }
+          });
+        }
       },
       '/groq': {
         target: 'https://api.groq.com',

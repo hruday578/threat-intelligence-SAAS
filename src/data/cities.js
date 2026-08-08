@@ -15,7 +15,7 @@ export const citiesByState = {
     "Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kakinada", "Kadapa", "Anantapur"
   ],
   "Kerala": [
-    "Trivandrum", "Kochi", "Kozhikode", "Kollam", "Thrissur", "Palakkad", "Alappuzha", "Kottayam", "Malappuram", "Kannur"
+    "Pathanamthitta", "Wayanad", "Trivandrum", "Kochi", "Kozhikode", "Kollam", "Thrissur", "Palakkad", "Alappuzha", "Kottayam", "Malappuram", "Kannur", "Idukki", "Kasaragod", "Munnar", "Sabarimala", "Varkala", "Kuttanad", "Meppadi", "Mundakkai", "Chooralmala"
   ],
   "Delhi": [
     "New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi", "Dwarka", "Rohini", "Saket", "Vasant Kunj"

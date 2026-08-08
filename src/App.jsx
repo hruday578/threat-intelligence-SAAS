@@ -105,41 +105,23 @@ const CONCEPT_EXPANSIONS = {
   ],
   // Monsoon / Rain / Flood / Storm expansions
   'http://en.wikipedia.org/wiki/Monsoon': [
-    'http://en.wikipedia.org/wiki/Monsoon',
-    'http://en.wikipedia.org/wiki/Rain',
-    'http://en.wikipedia.org/wiki/Flood',
-    'http://en.wikipedia.org/wiki/Flash_flood',
-    'http://en.wikipedia.org/wiki/Landslide',
-    'http://en.wikipedia.org/wiki/Storm'
+    'http://en.wikipedia.org/wiki/Monsoon'
   ],
   'http://en.wikipedia.org/wiki/Flood': [
     'http://en.wikipedia.org/wiki/Flood',
-    'http://en.wikipedia.org/wiki/Flash_flood',
-    'http://en.wikipedia.org/wiki/Rain',
-    'http://en.wikipedia.org/wiki/Monsoon',
-    'http://en.wikipedia.org/wiki/Landslide'
+    'http://en.wikipedia.org/wiki/Flash_flood'
   ],
   'http://en.wikipedia.org/wiki/Rain': [
-    'http://en.wikipedia.org/wiki/Rain',
-    'http://en.wikipedia.org/wiki/Flood',
-    'http://en.wikipedia.org/wiki/Flash_flood',
-    'http://en.wikipedia.org/wiki/Monsoon',
-    'http://en.wikipedia.org/wiki/Storm'
+    'http://en.wikipedia.org/wiki/Rain'
   ],
   'http://en.wikipedia.org/wiki/Storm': [
     'http://en.wikipedia.org/wiki/Storm',
-    'http://en.wikipedia.org/wiki/Thunderstorm',
-    'http://en.wikipedia.org/wiki/Rain',
-    'http://en.wikipedia.org/wiki/Tropical_cyclone',
-    'http://en.wikipedia.org/wiki/Flood'
+    'http://en.wikipedia.org/wiki/Thunderstorm'
   ],
   'http://en.wikipedia.org/wiki/Tropical_cyclone': [
     'http://en.wikipedia.org/wiki/Tropical_cyclone',
-    'http://en.wikipedia.org/wiki/Storm',
     'http://en.wikipedia.org/wiki/Typhoon',
-    'http://en.wikipedia.org/wiki/Hurricane',
-    'http://en.wikipedia.org/wiki/Rain',
-    'http://en.wikipedia.org/wiki/Flood'
+    'http://en.wikipedia.org/wiki/Hurricane'
   ],
   // Cyberattack
   'http://en.wikipedia.org/wiki/Cyberattack': [
@@ -263,6 +245,7 @@ Return ONLY a valid JSON array matching the exact input order, including the inp
     "classification": "ALERT|INFORMATIVE|IRRELEVANT",
     "hazard": "Specific Hazard Type (e.g. Heavy Rain Warning, Cyclone Watch, Flash Flood Risk)",
     "region": "Specific City, State, Country",
+    "exact_location": "Extract the specific city, town, district, province, or landmark mentioned anywhere in the world (e.g. Shinjuku Tokyo, Frankfurt, Manhattan New York, Houston, Sydney, Pathanamthitta, Dadar Mumbai, Munich, Osaka). Do not output generic country names if a specific city/town is mentioned.",
     "reasoning": "1-2 sentence EOC operational rationale citing official authority, timeline, and threat level",
     "mitigation": "Actionable pre-incident operational protocols for emergency response teams & organizations",
     "citizen_action": "Actionable pre-hazard safety measures for citizens and employees",
@@ -332,7 +315,10 @@ const Logo = ({ className = "h-16" }) => (
 function MultiSelect({ label, options = [], selected = [], onChange, placeholder, disabled }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const filtered = (options || []).filter(o => (o.label || '').toLowerCase().includes(search.toLowerCase()));
+  const filtered = (options || []).filter(o =>
+    (o.label || '').toLowerCase().includes(search.toLowerCase()) ||
+    (o.code || '').toLowerCase() === search.toLowerCase()
+  );
   return (
     <div className={`relative flex-1 min-w-[140px] ${disabled ? 'opacity-40' : ''}`}>
       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} {selected.length > 0 && <span className="text-red-600">({selected.length})</span>}</label>
@@ -796,7 +782,8 @@ function AppMain() {
     countries.forEach(cName => {
       const match = ENHANCED_COUNTRIES.find(c => c.name.toLowerCase() === cName);
       if (match) {
-        matchedLocs.push({ label: match.name, code: match.code, uri: `http://en.wikipedia.org/wiki/${match.name.replace(/ /g, '_')}` });
+        const cleanWikiName = match.wikiName || match.name.split(' (')[0].trim();
+        matchedLocs.push({ label: match.name, code: match.code, uri: match.uri || `http://en.wikipedia.org/wiki/${cleanWikiName.replace(/ /g, '_')}` });
       }
     });
 
@@ -847,7 +834,14 @@ function AppMain() {
   const masterProcessedRef = useRef([]);
   const seenTitlesRef = useRef(new Set());
 
-  const countryList = (ENHANCED_COUNTRIES || []).map(c => ({ label: c.name, code: c.code, uri: `http://en.wikipedia.org/wiki/${c.name.replace(/ /g, '_')}` }));
+  const countryList = (ENHANCED_COUNTRIES || []).map(c => {
+    const cleanWikiName = c.wikiName || c.name.split(' (')[0].trim();
+    return {
+      label: c.name,
+      code: c.code,
+      uri: c.uri || `http://en.wikipedia.org/wiki/${cleanWikiName.replace(/ /g, '_')}`
+    };
+  });
   const stateList = (params.locs || []).reduce((acc, c) => [...acc, ...(ENHANCED_REGIONS[c.code] || [])], []);
   const cityList = (params.states || []).reduce((acc, s) => {
     const cities = citiesByState[s.label] || [];
@@ -980,6 +974,12 @@ function AppMain() {
         queryParts.push({ "$or": params.locs.map(l => ({ "conceptUri": l.uri })) });
       }
 
+      // 3b. Local Target Zones filter (e.g. Dadar)
+      if (activeZones.length > 0) {
+        const zoneParts = activeZones.map(z => ({ "keyword": z }));
+        queryParts.push({ "$or": zoneParts });
+      }
+
       // 4. Categories mapping
       if (params.cats.length) {
         queryParts.push({ "$or": params.cats.map(c => ({ "categoryUri": c.uri })) });
@@ -1042,14 +1042,21 @@ function AppMain() {
                 );
               }
               return data;
+            } else {
+              let errDetail = `HTTP ${res.status}`;
+              try {
+                const errBody = await res.json();
+                if (errBody?.error) errDetail = errBody.error;
+              } catch (_) {}
+              throw new Error(errDetail);
             }
           } catch (e) {
-            if (attempts === 1) throw new Error(`NETWORK_FAILURE: ${e.message}`);
-            await new Promise(r => setTimeout(r, 1000));
+            console.warn(`[NewsAPI Attempt ${attempts + 1} Failed]:`, e.message);
+            if (attempts === 1) throw new Error(e.message || `Unable to reach News API. Please check network connection.`);
+            await new Promise(r => setTimeout(r, 1500));
           }
         }
-        const errText = await res.text();
-        throw new Error(`API Error: ${res?.status} ${errText}`);
+        throw new Error(`Unable to fetch articles from News API.`);
       };
 
       let raw = [];
@@ -1083,6 +1090,16 @@ function AppMain() {
       } else {
         const genRes = await fetchNews(queryParts, 100).catch(e => { throw e; });
         raw = genRes?.articles?.results || [];
+      }
+
+      // If strict Target Zone search returned 0 articles, retry query without strict zone keyword condition
+      if (!raw.length && activeZones.length > 0) {
+        console.log('[News Fetch] Strict Target Zone query returned 0 articles. Falling back to broader State/Country query...');
+        const broaderParts = queryParts.filter(p => !p['$or'] || !p['$or'].some(item => item.keyword && activeZones.includes(item.keyword)));
+        try {
+          const fallbackRes = await fetchNews(broaderParts, 100);
+          raw = fallbackRes?.articles?.results || [];
+        } catch (_) {}
       }
 
       if (!raw.length) throw new Error('NO ARTICLES FOUND');
@@ -1123,13 +1140,25 @@ function AppMain() {
       // ─────────────────────────────────────────────────────────────────────────
 
       const seen = new Set();
-      const uniqueRaw = raw.filter(art => {
+      let uniqueRaw = raw.filter(art => {
         const key = art.title.toLowerCase().trim();
         if (seen.has(key) || seenTitlesRef.current.has(key)) return false;
         seen.add(key);
         seenTitlesRef.current.add(key);
         return true;
       });
+
+      // Strict keyword relevance safety net: if user entered specific hazard keywords, verify presence in title or text
+      if (keywords.length > 0) {
+        const activeKws = keywords.map(k => k.toLowerCase().trim());
+        const filtered = uniqueRaw.filter(art => {
+          const text = ((art.title || '') + ' ' + (art.body || '')).toLowerCase();
+          return activeKws.some(kw => text.includes(kw));
+        });
+        if (filtered.length > 0) {
+          uniqueRaw = filtered;
+        }
+      }
 
       if (!uniqueRaw.length) {
         setLoading(false);
@@ -1279,18 +1308,26 @@ function AppMain() {
               || (aiJsonArray && aiJsonArray[idx])
               || { classification: 'INFORMATIVE', reasoning: 'Missing from batch', mitigation: 'Monitor status', citizen_action: 'Stay alert', urgency: 'LOW', hazard: 'General', region: locationContext };
 
-            // REGION GUARD: If the AI returned a region that doesn't match our target, classify it as IRRELEVANT instead of discarding it!
+            // REGION GUARD: Verify geographical relevance without falsely marking specific city/town articles as IRRELEVANT
             if (aiJson.classification !== 'IRRELEVANT' && locationContext !== 'Global') {
-              const targetTokens = locationContext.toLowerCase().split(/[\s,]+/);
-              const aiRegion = (aiJson.region || '').toLowerCase();
-              const regionMatches = targetTokens.some(token => token.length > 2 && aiRegion.includes(token));
-              if (!regionMatches) {
+              const fullText = ((art.title || '') + ' ' + (art.body || '') + ' ' + (aiJson.region || '') + ' ' + (aiJson.exact_location || '') + ' ' + (aiJson.reasoning || '')).toLowerCase();
+              const targetTokens = locationContext.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
+
+              // Include active target zones (e.g. Pathanamthitta) in valid target tokens
+              activeZones.forEach(z => {
+                if (z.length > 2) targetTokens.push(z.toLowerCase());
+              });
+
+              // Include known cities/districts of the target state (e.g. Kerala cities)
+              if (locationContext.toLowerCase().includes('kerala')) {
+                const KERALA_TOWNS = ['kerala', 'pathanamthitta', 'wayanad', 'kochi', 'cochin', 'trivandrum', 'thiruvananthapuram', 'kozhikode', 'calicut', 'thrissur', 'palakkad', 'kollam', 'alappuzha', 'alleppey', 'idukki', 'kottayam', 'malappuram', 'kannur', 'kasaragod', 'munnar', 'sabarimala', 'pamba', 'vythiri', 'meppadi', 'chooralmala', 'mundakkai', 'kuttanad', 'varkala', 'guruvayur'];
+                targetTokens.push(...KERALA_TOWNS);
+              }
+
+              const isRelevant = targetTokens.some(token => fullText.includes(token));
+              if (!isRelevant) {
                 aiJson.classification = 'IRRELEVANT';
-                aiJson.reasoning = `Region Mismatch: Intel focuses on "${aiJson.region || 'another region'}" rather than "${locationContext}".`;
-              } else {
-                // Keep the AI's specific region so geocoding on the map is highly accurate, 
-                // instead of resetting it back to the broad target zone.
-                // E.g. keep "Bangalore, Karnataka, India" instead of overriding with "India".
+                aiJson.reasoning = `Region Mismatch: Intel focuses on another region rather than "${locationContext}".`;
               }
             }
 
@@ -1469,6 +1506,8 @@ function AppMain() {
             loading={loading}
             autoPilot={autoPilot}
             autoPilotInterval={autoPilotInterval}
+            targetZone={zonesInput}
+            radius={radius}
           />
         )}
         {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} />}

@@ -208,15 +208,120 @@ const CITY_COORDINATES = {
   "Kolkata": { lat: 22.5726, lon: 88.3639 },
   "Hyderabad": { lat: 17.3850, lon: 78.4867 },
   "Pune": { lat: 18.5204, lon: 73.8567 },
+  "Khadakwasla": { lat: 18.4414, lon: 73.7661 },
+  "khadakwasla": { lat: 18.4414, lon: 73.7661 },
+  "Khadakwasla Dam": { lat: 18.4414, lon: 73.7661 },
+  "Pimpri-Chinchwad": { lat: 18.6298, lon: 73.7997 },
+  "Pimpri Chinchwad": { lat: 18.6298, lon: 73.7997 },
+  "Pimpri": { lat: 18.6298, lon: 73.7997 },
+  "pimpri": { lat: 18.6298, lon: 73.7997 },
+  "Chinchwad": { lat: 18.6278, lon: 73.7915 },
+  "Hinjewadi": { lat: 18.5912, lon: 73.7389 },
+  "Kothrud": { lat: 18.5074, lon: 73.8077 },
+  "Viman Nagar": { lat: 18.5679, lon: 73.9143 },
   "Ahmedabad": { lat: 23.0225, lon: 72.5714 },
   "Jaipur": { lat: 26.9124, lon: 75.7873 },
   "Lucknow": { lat: 26.8467, lon: 80.9462 },
   "Maharashtra": { lat: 19.0760, lon: 72.8777 },
+  "Dadar": { lat: 19.0178, lon: 72.8478 },
+  "dadar": { lat: 19.0178, lon: 72.8478 },
   "Gujarat": { lat: 23.0225, lon: 72.5714 },
   "Rajasthan": { lat: 26.9124, lon: 75.7873 },
   "Tamil Nadu": { lat: 13.0827, lon: 80.2707 },
   "West Bengal": { lat: 22.5726, lon: 88.3639 },
   "Uttar Pradesh": { lat: 26.8467, lon: 80.9462 },
+
+  // ── Kerala State, Districts, Towns & Disaster Hotspots ────────────────────
+  "Kerala": { lat: 10.8505, lon: 76.2711 },
+  "kerala": { lat: 10.8505, lon: 76.2711 },
+  "Pathanamthitta": { lat: 9.2648, lon: 76.7870 },
+  "pathanamthitta": { lat: 9.2648, lon: 76.7870 },
+  "Wayanad": { lat: 11.6854, lon: 76.1320 },
+  "wayanad": { lat: 11.6854, lon: 76.1320 },
+  "Thiruvananthapuram": { lat: 8.5241, lon: 76.9366 },
+  "thiruvananthapuram": { lat: 8.5241, lon: 76.9366 },
+  "Trivandrum": { lat: 8.5241, lon: 76.9366 },
+  "trivandrum": { lat: 8.5241, lon: 76.9366 },
+  "Kochi": { lat: 9.9312, lon: 76.2673 },
+  "kochi": { lat: 9.9312, lon: 76.2673 },
+  "Cochin": { lat: 9.9312, lon: 76.2673 },
+  "cochin": { lat: 9.9312, lon: 76.2673 },
+  "Ernakulam": { lat: 9.9816, lon: 76.2999 },
+  "ernakulam": { lat: 9.9816, lon: 76.2999 },
+  "Kozhikode": { lat: 11.2588, lon: 75.7804 },
+  "kozhikode": { lat: 11.2588, lon: 75.7804 },
+  "Calicut": { lat: 11.2588, lon: 75.7804 },
+  "calicut": { lat: 11.2588, lon: 75.7804 },
+  "Thrissur": { lat: 10.5276, lon: 76.2144 },
+  "thrissur": { lat: 10.5276, lon: 76.2144 },
+  "Trichur": { lat: 10.5276, lon: 76.2144 },
+  "Palakkad": { lat: 10.7867, lon: 76.6548 },
+  "palakkad": { lat: 10.7867, lon: 76.6548 },
+  "Palghat": { lat: 10.7867, lon: 76.6548 },
+  "Kollam": { lat: 8.8932, lon: 76.6141 },
+  "kollam": { lat: 8.8932, lon: 76.6141 },
+  "Quilon": { lat: 8.8932, lon: 76.6141 },
+  "Alappuzha": { lat: 9.4981, lon: 76.3388 },
+  "alappuzha": { lat: 9.4981, lon: 76.3388 },
+  "Alleppey": { lat: 9.4981, lon: 76.3388 },
+  "alleppey": { lat: 9.4981, lon: 76.3388 },
+  "Idukki": { lat: 9.8497, lon: 76.9806 },
+  "idukki": { lat: 9.8497, lon: 76.9806 },
+  "Kottayam": { lat: 9.5916, lon: 76.5222 },
+  "kottayam": { lat: 9.5916, lon: 76.5222 },
+  "Malappuram": { lat: 11.0732, lon: 76.0740 },
+  "malappuram": { lat: 11.0732, lon: 76.0740 },
+  "Kannur": { lat: 11.8745, lon: 75.3704 },
+  "kannur": { lat: 11.8745, lon: 75.3704 },
+  "Kasaragod": { lat: 12.5102, lon: 74.9852 },
+  "kasaragod": { lat: 12.5102, lon: 74.9852 },
+  "Munnar": { lat: 10.0889, lon: 77.0595 },
+  "munnar": { lat: 10.0889, lon: 77.0595 },
+  "Sabarimala": { lat: 9.4344, lon: 77.0814 },
+  "sabarimala": { lat: 9.4344, lon: 77.0814 },
+  "Pamba": { lat: 9.4100, lon: 77.0700 },
+  "pamba": { lat: 9.4100, lon: 77.0700 },
+  "Vythiri": { lat: 11.5516, lon: 76.0384 },
+  "vythiri": { lat: 11.5516, lon: 76.0384 },
+  "Meppadi": { lat: 11.5516, lon: 76.1264 },
+  "meppadi": { lat: 11.5516, lon: 76.1264 },
+  "Chooralmala": { lat: 11.5175, lon: 76.1603 },
+  "chooralmala": { lat: 11.5175, lon: 76.1603 },
+  "Mundakkai": { lat: 11.5030, lon: 76.1730 },
+  "mundakkai": { lat: 11.5030, lon: 76.1730 },
+  "Kuttanad": { lat: 9.4200, lon: 76.4000 },
+  "kuttanad": { lat: 9.4200, lon: 76.4000 },
+  "Varkala": { lat: 8.7379, lon: 76.7163 },
+  "varkala": { lat: 8.7379, lon: 76.7163 },
+  "Guruvayur": { lat: 10.5946, lon: 76.0409 },
+  "guruvayur": { lat: 10.5946, lon: 76.0409 },
+  "Adoor": { lat: 9.1558, lon: 76.7327 },
+  "adoor": { lat: 9.1558, lon: 76.7327 },
+  "Tiruvalla": { lat: 9.3833, lon: 76.5750 },
+  "Thiruvalla": { lat: 9.3833, lon: 76.5750 },
+  "Ranni": { lat: 9.3800, lon: 76.8100 },
+  "ranni": { lat: 9.3800, lon: 76.8100 },
+  "Konni": { lat: 9.2439, lon: 76.8488 },
+  "konni": { lat: 9.2439, lon: 76.8488 },
+  "Pandalam": { lat: 9.2319, lon: 76.6789 },
+  "pandalam": { lat: 9.2319, lon: 76.6789 },
+  "Chengannur": { lat: 9.3175, lon: 76.6111 },
+  "chengannur": { lat: 9.3175, lon: 76.6111 },
+  "Changanassery": { lat: 9.4475, lon: 76.5372 },
+  "changanassery": { lat: 9.4475, lon: 76.5372 },
+  "Vaikom": { lat: 9.7497, lon: 76.3970 },
+  "vaikom": { lat: 9.7497, lon: 76.3970 },
+  "Pala": { lat: 9.7119, lon: 76.6844 },
+  "pala": { lat: 9.7119, lon: 76.6844 },
+  "Kanjirappally": { lat: 9.5578, lon: 76.7878 },
+  "kanjirappally": { lat: 9.5578, lon: 76.7878 },
+  "Peerumade": { lat: 9.5786, lon: 76.9692 },
+  "Kumily": { lat: 9.6053, lon: 77.1658 },
+  "kumily": { lat: 9.6053, lon: 77.1658 },
+  "Devikulam": { lat: 10.0632, lon: 77.1060 },
+  "Attingal": { lat: 8.6960, lon: 76.8143 },
+  "Neyyattinkara": { lat: 8.4009, lon: 77.0862 },
+  "Nedumangad": { lat: 8.6019, lon: 76.9961 },
   "Indonesia": { lat: -6.2088, lon: 106.8456 }, // Jakarta
   "Jakarta": { lat: -6.2088, lon: 106.8456 },
   "Bali": { lat: -8.3405, lon: 115.0919 },
@@ -476,7 +581,9 @@ export default function MapsPage({
   handleExecute,
   loading: scanLoading = false,
   autoPilot = false,
-  autoPilotInterval = 5
+  autoPilotInterval = 5,
+  targetZone = '',
+  radius = 0
 }) {
   const [markers, setMarkers] = useState([]);
   const [employeeMarkers, setEmployeeMarkers] = useState([]);
@@ -508,8 +615,88 @@ export default function MapsPage({
   const [countdown, setCountdown] = useState(autoPilotInterval * 60);
 
   // Warning settings
-  const [warnRadius, setWarnRadius] = useState(100); // dynamic warn radius slider (25 - 500km)
+  const [warnRadius, setWarnRadius] = useState(radius > 0 ? radius : 100);
   const [enableSound, setEnableSound] = useState(true);
+  const [targetZoneMarker, setTargetZoneMarker] = useState(null);
+  const [strictRadiusFilter, setStrictRadiusFilter] = useState(true);
+
+  // Sync warnRadius when radius prop changes
+  useEffect(() => {
+    if (radius > 0) {
+      setWarnRadius(radius);
+    }
+  }, [radius]);
+
+  // Target Zone Geocoding & Map Fly-To Effect
+  useEffect(() => {
+    const rawZone = (targetZone || '').trim();
+    if (!rawZone) {
+      setTargetZoneMarker(null);
+      return;
+    }
+
+    let isMounted = true;
+    const resolveTargetZone = async () => {
+      // 1. Check exact match in CITY_COORDINATES table
+      let coords = CITY_COORDINATES[rawZone] || CITY_COORDINATES[rawZone.charAt(0).toUpperCase() + rawZone.slice(1)];
+
+      // 2. If not found, try Nominatim search for raw target zone directly first
+      if (!coords) {
+        try {
+          // Query target zone directly (e.g. "khadakwasla" or "khadakwasla dam")
+          let res = await fetch(`/nominatim/search?q=${encodeURIComponent(rawZone)}&format=json&limit=1`, {
+            headers: { 'Accept-Language': 'en' }
+          });
+          if (res.ok) {
+            let data = await res.json();
+            if ((!data || !data.length) && articles.length > 0) {
+              // Try contextual query only if raw query returns zero results
+              const firstRegion = articles[0]?.ai?.region;
+              if (firstRegion && !firstRegion.toLowerCase().includes(rawZone.toLowerCase())) {
+                const ctxQuery = `${rawZone}, ${firstRegion}`;
+                res = await fetch(`/nominatim/search?q=${encodeURIComponent(ctxQuery)}&format=json&limit=1`, {
+                  headers: { 'Accept-Language': 'en' }
+                });
+                if (res.ok) data = await res.json();
+              }
+            }
+            if (data && data.length > 0) {
+              coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+            }
+          }
+        } catch (e) {
+          console.warn('[Maps] Failed to geocode target zone:', rawZone, e);
+        }
+      }
+
+      if (isMounted && coords) {
+        setTargetZoneMarker({ ...coords, label: rawZone });
+        const effectiveR = radius > 0 ? radius : warnRadius;
+        const zoomLvl = effectiveR <= 2 ? 14 : effectiveR <= 10 ? 12 : 10;
+        setFlyToCoords({ center: [coords.lat, coords.lon], zoom: zoomLvl });
+      }
+    };
+
+    resolveTargetZone();
+    return () => { isMounted = false; };
+  }, [targetZone, radius, warnRadius]);
+
+  const activeRadius = radius > 0 ? radius : warnRadius;
+
+  // Filter markers strictly within target zone radius when strict filter is enabled
+  const displayMarkers = useMemo(() => {
+    if (!targetZoneMarker || !strictRadiusFilter) return markers;
+    return markers.filter(m => {
+      if (m._isGlobal) return true;
+      const dist = getHaversineDistance(m.lat, m.lon, targetZoneMarker.lat, targetZoneMarker.lon);
+      return dist <= activeRadius;
+    });
+  }, [markers, targetZoneMarker, strictRadiusFilter, activeRadius]);
+
+  const hiddenOuterCount = useMemo(() => {
+    if (!targetZoneMarker || !strictRadiusFilter) return 0;
+    return markers.length - displayMarkers.length;
+  }, [markers, displayMarkers, targetZoneMarker, strictRadiusFilter]);
 
   // Manual Plot modal trigger state
   const [placementCoords, setPlacementCoords] = useState(null);
@@ -590,38 +777,110 @@ export default function MapsPage({
       const results = [];
       const cache = JSON.parse(localStorage.getItem('alertem_geo_cache') || '{}');
 
-      // Group articles by region to avoid duplicate geocode calls
-      const regionGroups = {};
-      for (const art of combinedArticles) {
+      const BROAD_GEO_TERMS = new Set([
+        'india', 'united states', 'usa', 'us', 'uk', 'united kingdom', 'china',
+        'japan', 'germany', 'france', 'russia', 'global', 'asia', 'europe',
+        'africa', 'america', 'california', 'maharashtra', 'tamil nadu',
+        'uttar pradesh', 'west bengal', 'rajasthan', 'gujarat', 'delhi'
+      ]);
+
+      const KERALA_BOUNDS = { minLat: 8.0, maxLat: 13.0, minLon: 74.5, maxLon: 77.8 };
+
+      // Helper to determine exact pinpoint location for an article
+      const determinePinpointLocation = (art) => {
+        const fullText = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.body || '') + ' ' + (art.ai?.exact_location || '') + ' ' + (art.ai?.region || '')).toLowerCase();
+
+        // Priority 0: Active Target Zone match! (e.g. if targetZone is Idukki and text mentions Idukki or Kerala)
+        if (targetZone && targetZone.trim().length > 2) {
+          const rawZones = targetZone.split(',').map(z => z.trim().toLowerCase()).filter(Boolean);
+          for (const zone of rawZones) {
+            if (fullText.includes(zone)) {
+              const matchedKey = Object.keys(CITY_COORDINATES).find(k => k.toLowerCase() === zone);
+              if (matchedKey) return matchedKey;
+              return zone.charAt(0).toUpperCase() + zone.slice(1);
+            }
+          }
+        }
+
+        // Priority 1: AI exact_location if available and valid
+        if (art.ai?.exact_location && art.ai.exact_location.trim().length > 2) {
+          const loc = art.ai.exact_location.trim();
+          if (!BROAD_GEO_TERMS.has(loc.toLowerCase())) return loc;
+        }
+
+        // Priority 2: Scan for specific Kerala/city keys in title/reasoning
+        const sortedKeys = Object.keys(CITY_COORDINATES).sort((a, b) => b.length - a.length);
+        for (const key of sortedKeys) {
+          if (key.length >= 4 && !BROAD_GEO_TERMS.has(key.toLowerCase())) {
+            if (fullText.includes(key.toLowerCase())) {
+              return key;
+            }
+          }
+        }
+
+        // Priority 3: Fall back to active targetZone or art.ai.region
         let region = (art.ai?.region || '').trim();
-        // Skip irrelevant ones
+        if (!region || BROAD_GEO_TERMS.has(region.toLowerCase())) {
+          if (targetZone && targetZone.trim().length > 2) {
+            const firstZone = targetZone.split(',')[0].trim();
+            const matchedKey = Object.keys(CITY_COORDINATES).find(k => k.toLowerCase() === firstZone.toLowerCase());
+            if (matchedKey) return matchedKey;
+            return firstZone.charAt(0).toUpperCase() + firstZone.slice(1);
+          }
+          if (fullText.includes('kerala')) {
+            return 'Kerala';
+          }
+        }
+        return region || 'Global';
+      };
+
+      // Group articles by pinpoint target location
+      const locationGroups = {};
+      for (const art of combinedArticles) {
         if (art.ai?.classification === 'IRRELEVANT') continue;
-        if (!region) region = 'Global';
-        if (!regionGroups[region]) regionGroups[region] = [];
-        regionGroups[region].push(art);
+        const targetLoc = determinePinpointLocation(art);
+        if (!locationGroups[targetLoc]) locationGroups[targetLoc] = [];
+        locationGroups[targetLoc].push(art);
       }
 
-      for (const [region, arts] of Object.entries(regionGroups)) {
+      for (const [targetLoc, arts] of Object.entries(locationGroups)) {
         let coords = null;
-        const isGlobal = region.toLowerCase() === 'global' || region.toLowerCase() === 'none';
+        const isGlobal = targetLoc.toLowerCase() === 'global' || targetLoc.toLowerCase() === 'none';
 
         if (isGlobal) {
-          // Plot global threats in the mid-Atlantic ocean as a tactical node
           coords = { lat: 25.0, lon: -35.0 };
         } else {
-          // Try in-memory cache first, then persistent localStorage cache
-          coords = geocodeCacheRef.current[region] || cache[region];
+          // 1. Check exact match in CITY_COORDINATES
+          coords = CITY_COORDINATES[targetLoc] || CITY_COORDINATES[targetLoc.charAt(0).toUpperCase() + targetLoc.slice(1)];
 
-          // Check built-in land-guaranteed coordinate table for exact match
           if (!coords) {
-            coords = CITY_COORDINATES[region];
+            const targetLower = targetLoc.toLowerCase();
+            const matchedKey = Object.keys(CITY_COORDINATES).find(k => k.toLowerCase() === targetLower);
+            if (matchedKey) coords = CITY_COORDINATES[matchedKey];
           }
 
-          // If not in cache or exact coordinates, query the real Nominatim API first
+          // 2. Try in-memory & localStorage cache (only if valid)
+          if (!coords && cache[targetLoc]) {
+            const cached = cache[targetLoc];
+            // Don't accept cached New Delhi coords for Kerala queries
+            if (!(targetLoc.toLowerCase().includes('kerala') && cached.lat > 20.0)) {
+              coords = cached;
+            }
+          }
+
+          // 3. Query Nominatim API if not found
           if (!coords) {
             try {
-              // Strategy 1: Query for city/town/village (always on land)
-              const encoded = encodeURIComponent(region);
+              const isKeralaRelated = arts.some(art => {
+                const txt = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.ai?.region || '')).toLowerCase();
+                return txt.includes('kerala') || txt.includes('idukki') || txt.includes('pathanamthitta') || txt.includes('wayanad');
+              });
+
+              const searchQuery = isKeralaRelated && !targetLoc.toLowerCase().includes('kerala')
+                ? `${targetLoc}, Kerala, India`
+                : targetLoc;
+
+              const encoded = encodeURIComponent(searchQuery);
               const res = await fetch(
                 `/nominatim/search?q=${encoded}&format=json&limit=5&addressdetails=1`,
                 { headers: { 'Accept-Language': 'en' } }
@@ -629,8 +888,6 @@ export default function MapsPage({
               if (res.ok) {
                 const data = await res.json();
                 if (data && data.length > 0) {
-                  // Prefer results that are cities, towns, villages (on land)
-                  // over countries or regions which often have sea centroids
                   const LAND_TYPES = ['city', 'town', 'village', 'suburb', 'municipality',
                     'administrative', 'county', 'state_district', 'province', 'quarter'];
                   const landResult = data.find(d =>
@@ -639,55 +896,77 @@ export default function MapsPage({
                   );
                   const chosen = landResult || data[0];
                   coords = { lat: parseFloat(chosen.lat), lon: parseFloat(chosen.lon) };
-                  cache[region] = coords;
-                  geocodeCacheRef.current[region] = coords;
+                  cache[targetLoc] = coords;
+                  geocodeCacheRef.current[targetLoc] = coords;
                   localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
                 }
               }
               await new Promise(r => setTimeout(r, 1100));
             } catch (e) {
-              console.error('[Maps] Geocode failed for region:', region, e);
+              console.error('[Maps] Geocode failed for targetLoc:', targetLoc, e);
             }
           }
 
-          // If Nominatim fails or returns nothing, fall back to rough substring matching in CITY_COORDINATES
+          // 4. Substring matching fallback (excluding broad terms)
           if (!coords) {
-            const regionLower = region.toLowerCase();
-            // Sort keys by length descending to match more specific names (e.g. "Tamil Nadu") before general names (e.g. "India")
+            const locLower = targetLoc.toLowerCase();
             const sortedKeys = Object.keys(CITY_COORDINATES).sort((a, b) => b.length - a.length);
             const matchKey = sortedKeys.find(k =>
-              regionLower.includes(k.toLowerCase()) || k.toLowerCase().includes(regionLower)
+              !BROAD_GEO_TERMS.has(k.toLowerCase()) &&
+              (locLower.includes(k.toLowerCase()) || k.toLowerCase().includes(locLower))
             );
             if (matchKey) {
               coords = CITY_COORDINATES[matchKey];
-              cache[region] = coords;
-              geocodeCacheRef.current[region] = coords;
-              localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
+            }
+          }
+        }
+
+        // ── KERALA SPATIAL BOUNDING GUARD ──
+        // Ensure any Kerala-related article ALWAYS plots strictly inside Kerala borders (not in New Delhi or Nagpur)
+        arts.forEach((art, idx) => {
+          const text = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.ai?.region || '') + ' ' + targetLoc).toLowerCase();
+          const isKerala = text.includes('kerala') || text.includes('idukki') || text.includes('pathanamthitta') || text.includes('wayanad') || text.includes('kochi') || text.includes('trivandrum') || text.includes('thiruvananthapuram');
+
+          let finalCoords = coords;
+          if (isKerala) {
+            const isOutsideKerala = !finalCoords ||
+              finalCoords.lat < KERALA_BOUNDS.minLat || finalCoords.lat > KERALA_BOUNDS.maxLat ||
+              finalCoords.lon < KERALA_BOUNDS.minLon || finalCoords.lon > KERALA_BOUNDS.maxLon;
+
+            if (isOutsideKerala) {
+              // Try matching specific Kerala district from text
+              const foundDistrictKey = Object.keys(CITY_COORDINATES).find(k => {
+                const kLower = k.toLowerCase();
+                return kLower !== 'india' && kLower !== 'delhi' && text.includes(kLower) && CITY_COORDINATES[k].lat >= 8.0 && CITY_COORDINATES[k].lat <= 13.0;
+              });
+
+              if (foundDistrictKey) {
+                finalCoords = CITY_COORDINATES[foundDistrictKey];
+              } else if (targetZone && CITY_COORDINATES[targetZone]) {
+                finalCoords = CITY_COORDINATES[targetZone];
+              } else {
+                finalCoords = CITY_COORDINATES["Idukki"] || CITY_COORDINATES["Kerala"];
+              }
             }
           }
 
-          // If geocoding still fails, treat it as global/unmapped in the ocean instead of skipping it!
-          if (!coords) {
-            coords = { lat: 25.0, lon: -35.0 };
+          if (!finalCoords) {
+            finalCoords = { lat: 25.0, lon: -35.0 };
           }
-        }
 
-        if (coords) {
-          const isActuallyGlobal = isGlobal || (coords.lat === 25.0 && coords.lon === -35.0);
-          arts.forEach((art, idx) => {
-            // Use tiny spread (0.01°≈1km) so markers stay on land even when fanned apart
-            const angle = (idx / Math.max(arts.length, 1)) * 2 * Math.PI;
-            const spread = arts.length > 1 ? 0.012 : 0;
-            results.push({
-              ...art,
-              lat: coords.lat + Math.sin(angle) * spread,
-              lon: coords.lon + Math.cos(angle) * spread,
-              _baseLat: coords.lat,
-              _baseLon: coords.lon,
-              _isGlobal: isActuallyGlobal,
-            });
+          const isActuallyGlobal = isGlobal || (finalCoords.lat === 25.0 && finalCoords.lon === -35.0);
+          const angle = (idx / Math.max(arts.length, 1)) * 2 * Math.PI;
+          const spread = arts.length > 1 ? 0.012 : 0;
+
+          results.push({
+            ...art,
+            lat: finalCoords.lat + Math.sin(angle) * spread,
+            lon: finalCoords.lon + Math.cos(angle) * spread,
+            _baseLat: finalCoords.lat,
+            _baseLon: finalCoords.lon,
+            _isGlobal: isActuallyGlobal,
           });
-        }
+        });
       }
 
       setMarkers(results);
@@ -1578,15 +1857,100 @@ export default function MapsPage({
               </Polyline>
             ))}
 
+            {/* Target Zone Radius Circle & Marker */}
+            {targetZoneMarker && (
+              <>
+                <Circle
+                  center={[targetZoneMarker.lat, targetZoneMarker.lon]}
+                  radius={(radius > 0 ? radius : warnRadius) * 1000}
+                  pathOptions={{
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.25,
+                    weight: 2.5,
+                    dashArray: '6, 6',
+                    className: 'pulse-zone-target'
+                  }}
+                />
+                <Marker
+                  position={[targetZoneMarker.lat, targetZoneMarker.lon]}
+                  icon={L.divIcon({
+                    className: 'target-zone-pin',
+                    html: `
+                      <div style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 12px; font-weight: 900; font-size: 10px; border: 2px solid white; box-shadow: 0 4px 12px rgba(37,99,235,0.5); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                        🎯 TARGET: ${targetZoneMarker.label.toUpperCase()} (${radius > 0 ? radius : warnRadius}KM)
+                      </div>
+                    `,
+                    iconSize: [140, 30],
+                    iconAnchor: [70, 15]
+                  })}
+                >
+                  <Popup>
+                    <div className="maps-popup-content">
+                      <span className="maps-popup-badge maps-popup-badge--info">🎯 TARGET ZONE</span>
+                      <h4 className="font-bold text-blue-600 mt-1">{targetZoneMarker.label}</h4>
+                      <p className="text-xs text-gray-400 mt-1">Search radius: <strong>{radius > 0 ? radius : warnRadius} km</strong></p>
+                    </div>
+                  </Popup>
+                </Marker>
+              </>
+            )}
+
+            {/* Target Zone Radial Control Banner */}
+            {targetZoneMarker && (
+              <div style={{
+                position: 'absolute',
+                top: '16px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 999,
+                background: 'rgba(15, 23, 42, 0.92)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '16px',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#ffffff',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+                maxWidth: '90%'
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  🎯 TARGET: {targetZoneMarker.label.toUpperCase()} ({activeRadius}KM RADIUS)
+                </span>
+                
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', color: strictRadiusFilter ? '#38bdf8' : '#9ca3af' }}>
+                  <input
+                    type="checkbox"
+                    checked={strictRadiusFilter}
+                    onChange={e => setStrictRadiusFilter(e.target.checked)}
+                    style={{ accentColor: '#0284c7', cursor: 'pointer' }}
+                  />
+                  Strict {activeRadius}KM Radius Filter
+                </label>
+
+                {hiddenOuterCount > 0 ? (
+                  <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '2px 8px', borderRadius: '8px' }}>
+                    {hiddenOuterCount} outer metro alerts hidden
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(34, 197, 94, 0.2)', color: '#86efac', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '2px 8px', borderRadius: '8px' }}>
+                    {displayMarkers.length} threats inside perimeter
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Threat Alert Zones (Circles for localized impact region) */}
-            {showAlerts && markers.filter(m => m.ai?.classification === 'ALERT' && !m._isGlobal).map((art, idx) => {
+            {showAlerts && displayMarkers.filter(m => m.ai?.classification === 'ALERT' && !m._isGlobal).map((art, idx) => {
               const isHigh = (art.ai?.urgency || '').toUpperCase() === 'HIGH';
               const color = isHigh ? '#dc2626' : '#ca8a04';
               return (
                 <Circle
                   key={`alert-zone-${idx}`}
                   center={[art.lat, art.lon]}
-                  radius={warnRadius * 1000} // radius in meters (100km default)
+                  radius={activeRadius * 1000} // radius in meters
                   pathOptions={{
                     color: color,
                     fillColor: color,
@@ -1600,7 +1964,7 @@ export default function MapsPage({
             })}
 
             {/* Threat Alerts (Red Markers) */}
-            {showAlerts && markers.filter(m => m.ai?.classification === 'ALERT').map((art, idx) => (
+            {showAlerts && displayMarkers.filter(m => m.ai?.classification === 'ALERT').map((art, idx) => (
               <Marker
                 key={`alert-${idx}`}
                 position={[art.lat, art.lon]}
@@ -1610,7 +1974,7 @@ export default function MapsPage({
             ))}
 
             {/* Threat Reports (Blue Markers) */}
-            {showReports && markers.filter(m => m.ai?.classification === 'INFORMATIVE').map((art, idx) => (
+            {showReports && displayMarkers.filter(m => m.ai?.classification === 'INFORMATIVE').map((art, idx) => (
               <Marker
                 key={`info-${idx}`}
                 position={[art.lat, art.lon]}
