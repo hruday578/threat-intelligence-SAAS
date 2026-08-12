@@ -267,10 +267,10 @@ const DURATIONS = [
   { label: '30D', value: '30d', days: 30 }
 ];
 const PROVIDERS = [
-  { id: 'groq-8b', label: 'GROQ 20B FAST', endpoint: '/groq/chat/completions', model: 'openai/gpt-oss-20b' },
-  { id: 'groq-70b', label: 'GROQ 120B', endpoint: '/groq/chat/completions', model: 'openai/gpt-oss-120b' },
-  { id: 'openrouter', label: 'OPENROUTER', endpoint: '/openrouter/chat/completions', model: 'meta-llama/llama-3.3-70b-instruct:free' },
-  { id: 'deepseek', label: 'DEEPSEEK', endpoint: '/deepseek/chat/completions', model: 'deepseek-chat' }
+  { id: 'groq-8b', label: 'GROQ 8B FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
+  { id: 'groq-70b', label: 'GROQ 70B', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-70b-versatile' },
+  { id: 'openrouter', label: 'OPENROUTER', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.3-70b-instruct:free' },
+  { id: 'deepseek', label: 'DEEPSEEK', endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' }
 ];
 
 const ENHANCED_COUNTRIES = [
@@ -1024,7 +1024,7 @@ function AppMain() {
               query: queryBlock
             };
             console.log("AlertEm NewsAPI Request:", JSON.stringify(body, null, 2));
-            res = await fetch(`/news-proxy`, {
+            res = await fetch(`https://newsapi.ai/api/v1/article/getArticles`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body)
             });
