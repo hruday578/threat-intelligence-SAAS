@@ -209,10 +209,12 @@ const BATCH_CLASSIFY_PROMPT = (topic, location, expandedZones = []) => {
   const zoneList = expandedZones.length > 1
     ? `"${location}" and surrounding zone (${expandedZones.slice(0, 8).join(', ')})`
     : `"${location}"`;
+  const currentDate = new Date().toISOString().split('T')[0];
 
   return `[ROLE: EOC PRINCIPAL THREAT INTELLIGENCE ANALYST]
 PRIMARY OPERATIONAL DIRECTIVE: MINIMIZE FALSE NEGATIVES. A missed meteorological warning, government alert, or upcoming hazard forecast is a CRITICAL SYSTEM FAILURE. When uncertain between ALERT and INFORMATIVE, ALWAYS DEFAULT TO ALERT.
 
+CURRENT DATE: ${currentDate}
 TARGET ZONE: ${zoneList} | MONITORING TOPICS: "${topic}"
 
 === EOC ANALYST 10-STEP INTERNAL REASONING ENGINE ===
@@ -234,6 +236,7 @@ Before generating JSON, evaluate each article through this 10-step operational d
 === CLASSIFICATION OPERATIONAL MANDATES ===
 - OFFICIAL FORECASTS = ALERT ALWAYS: Any watch, warning, advisory, or forecast issued by a meteorological or emergency authority for today or upcoming days is ALWAYS ALERT, never INFORMATIVE.
 - PREPAREDNESS & TRACKING = ALERT ALWAYS: Reports of authorities tracking storms, managing reservoir releases, or issuing precautionary notices = ALERT.
+- OLD / PAST THREATS = INFORMATIVE: If the event described is clearly in the past and the threat is over (e.g. comparing the article date to ${currentDate}), classify as INFORMATIVE, not ALERT.
 - PRE-INCIDENT MITIGATION FOCUS: "mitigation" and "citizen_action" MUST focus strictly on PRE-INCIDENT PREPAREDNESS & PREVENTATIVE ACTIONS (actions to take BEFORE impact to reduce harm). Never output "N/A", "Unknown", or vague text.
 
 === OUTPUT SCHEMA ===
@@ -1000,22 +1003,14 @@ function AppMain() {
         let res;
         for (let attempts = 0; attempts < 2; attempts++) {
           try {
-            // Separate date from topic conditions
-            const queryConditions = qParts.filter(p => !p.dateStart && !p.dateEnd);
-            const datePart = qParts.find(p => p.dateStart);
-
             // lang MUST be inside $query.$and — $filter does NOT support lang in EventRegistry AQL
-            const allConditions = [{ "lang": "eng" }, ...queryConditions];
+            const allConditions = [{ "lang": "eng" }, ...qParts];
 
             const queryBlock = {
               "$query": allConditions.length === 1
                 ? allConditions[0]
                 : { "$and": allConditions }
             };
-
-            const filterBlock = datePart
-              ? { "$filter": { "dateStart": datePart.dateStart, "dateEnd": datePart.dateEnd } }
-              : {};
 
             const body = {
               apiKey: newsKey,
@@ -1024,9 +1019,9 @@ function AppMain() {
               articlesSortBy: sortBy,
               resultType: "articles",
               dataType: ["news"],
-              articleBodyLen: 300,
+              articleBodyLen: 1000,
               keywordSearchMode: "simple",
-              query: { ...queryBlock, ...filterBlock }
+              query: queryBlock
             };
             console.log("AlertEm NewsAPI Request:", JSON.stringify(body, null, 2));
             res = await fetch(`/news-proxy`, {
@@ -1148,25 +1143,15 @@ function AppMain() {
         return true;
       });
 
-      // Strict keyword relevance safety net: if user entered specific hazard keywords, verify presence in title or text
-      if (keywords.length > 0) {
-        const activeKws = keywords.map(k => k.toLowerCase().trim());
-        const filtered = uniqueRaw.filter(art => {
-          const text = ((art.title || '') + ' ' + (art.body || '')).toLowerCase();
-          return activeKws.some(kw => text.includes(kw));
-        });
-        if (filtered.length > 0) {
-          uniqueRaw = filtered;
-        }
-      }
+      // (Removed strict client-side keyword filter to rely on NewsAPI's deeper body search)
 
       if (!uniqueRaw.length) {
         setLoading(false);
         return;
       }
 
-      // Limit max raw articles for fast AI response (top 35 articles)
-      const targetRaw = uniqueRaw.slice(0, 35);
+      // Limit max raw articles for fast AI response (top 70 articles)
+      const targetRaw = uniqueRaw.slice(0, 70);
 
       const processed = [];
       const activeProvider = PROVIDERS.find(p => p.id === provider);
@@ -1182,10 +1167,10 @@ function AppMain() {
         try {
           await new Promise(r => setTimeout(r, 500)); // Smooth throttle
 
-          const payload = chunk.map((a, idx) => ({ id: idx, title: a.title, body: (a.body || '').slice(0, 450) }));
+          const payload = chunk.map((a, idx) => ({ id: idx, title: a.title, body: (a.body || '').slice(0, 1000) }));
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          const timeoutId = setTimeout(() => controller.abort(), 25000);
           let aiRes;
 
           try {

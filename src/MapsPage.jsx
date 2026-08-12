@@ -230,6 +230,38 @@ const CITY_COORDINATES = {
   "Tamil Nadu": { lat: 13.0827, lon: 80.2707 },
   "West Bengal": { lat: 22.5726, lon: 88.3639 },
   "Uttar Pradesh": { lat: 26.8467, lon: 80.9462 },
+  "Odisha": { lat: 20.9517, lon: 85.0985 },
+  "odisha": { lat: 20.9517, lon: 85.0985 },
+  "Orissa": { lat: 20.9517, lon: 85.0985 },
+  "Bhubaneswar": { lat: 20.2961, lon: 85.8245 },
+  "Cuttack": { lat: 20.4625, lon: 85.8830 },
+  "Puri": { lat: 19.8135, lon: 85.8312 },
+  "Rourkela": { lat: 22.2604, lon: 84.8536 },
+  "Berhampur": { lat: 19.3150, lon: 84.7941 },
+  "Sambalpur": { lat: 21.4669, lon: 83.9756 },
+  "Balasore": { lat: 21.4942, lon: 86.9327 },
+  "Baleshwar": { lat: 21.4942, lon: 86.9327 },
+  "Baleswar": { lat: 21.4942, lon: 86.9327 },
+  "Mayurbhanj": { lat: 21.9333, lon: 86.7333 },
+  "Koraput": { lat: 18.8143, lon: 82.7108 },
+  "Kendrapara": { lat: 20.5012, lon: 86.4223 },
+  "Jagatsinghpur": { lat: 20.2578, lon: 86.1701 },
+  "Bhadrak": { lat: 21.0544, lon: 86.4998 },
+  "Kendujhar": { lat: 21.6284, lon: 85.5816 },
+  "Keonjhar": { lat: 21.6284, lon: 85.5816 },
+  "Ganjam": { lat: 19.3867, lon: 84.9925 },
+  "Khordha": { lat: 20.1824, lon: 85.6152 },
+  "Nayagarh": { lat: 20.1281, lon: 85.0991 },
+  "Dhenkanal": { lat: 20.6592, lon: 85.5980 },
+  "Kalahandi": { lat: 19.9165, lon: 83.1685 },
+  "Bolangir": { lat: 20.7153, lon: 83.4875 },
+  "Sonepur": { lat: 20.8350, lon: 83.9165 },
+  "Kalingatv": { lat: 20.9517, lon: 85.0985 },
+  "Kalingatnagar": { lat: 21.4500, lon: 85.9500 },
+  "Angul": { lat: 20.8400, lon: 85.1010 },
+  "Barbil": { lat: 22.1031, lon: 85.3814 },
+  "Paradip": { lat: 20.3168, lon: 86.6117 },
+  "Bay of Bengal": { lat: 15.0000, lon: 88.0000 },
 
   // ── Kerala State, Districts, Towns & Disaster Hotspots ────────────────────
   "Kerala": { lat: 10.8505, lon: 76.2711 },
@@ -784,14 +816,14 @@ export default function MapsPage({
         'uttar pradesh', 'west bengal', 'rajasthan', 'gujarat', 'delhi'
       ]);
 
-      const KERALA_BOUNDS = { minLat: 8.0, maxLat: 13.0, minLon: 74.5, maxLon: 77.8 };
-
-      // Helper to determine exact pinpoint location for an article
+      // KEY DESIGN RULE: We NEVER scan article body text for city name keywords —
+      // that causes false matches (e.g. an Odisha article mentioning Maharashtra gets
+      // mapped to Maharashtra). Instead we trust the AI's structured region/exact_location
+      // fields and let Nominatim resolve them precisely.
       const determinePinpointLocation = (art) => {
-        const fullText = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.body || '') + ' ' + (art.ai?.exact_location || '') + ' ' + (art.ai?.region || '')).toLowerCase();
-
-        // Priority 0: Active Target Zone match! (e.g. if targetZone is Idukki and text mentions Idukki or Kerala)
+        // Priority 0: Active Target Zone match
         if (targetZone && targetZone.trim().length > 2) {
+          const fullText = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.body || '') + ' ' + (art.ai?.exact_location || '') + ' ' + (art.ai?.region || '')).toLowerCase();
           const rawZones = targetZone.split(',').map(z => z.trim().toLowerCase()).filter(Boolean);
           for (const zone of rawZones) {
             if (fullText.includes(zone)) {
@@ -802,36 +834,21 @@ export default function MapsPage({
           }
         }
 
-        // Priority 1: AI exact_location if available and valid
+        // Priority 1: AI exact_location — use if specific and not a broad country/state name
         if (art.ai?.exact_location && art.ai.exact_location.trim().length > 2) {
           const loc = art.ai.exact_location.trim();
           if (!BROAD_GEO_TERMS.has(loc.toLowerCase())) return loc;
         }
 
-        // Priority 2: Scan for specific Kerala/city keys in title/reasoning
-        const sortedKeys = Object.keys(CITY_COORDINATES).sort((a, b) => b.length - a.length);
-        for (const key of sortedKeys) {
-          if (key.length >= 4 && !BROAD_GEO_TERMS.has(key.toLowerCase())) {
-            if (fullText.includes(key.toLowerCase())) {
-              return key;
-            }
-          }
+        // Priority 2: AI region field passed directly to Nominatim for accurate geocoding.
+        // We do NOT scan article body text for city keywords — that causes false matches
+        // (e.g. an Odisha article mentioning Maharashtra gets mapped to Maharashtra).
+        const region = (art.ai?.region || '').trim();
+        if (region && region.toLowerCase() !== 'global' && region !== '') {
+          return region;
         }
 
-        // Priority 3: Fall back to active targetZone or art.ai.region
-        let region = (art.ai?.region || '').trim();
-        if (!region || BROAD_GEO_TERMS.has(region.toLowerCase())) {
-          if (targetZone && targetZone.trim().length > 2) {
-            const firstZone = targetZone.split(',')[0].trim();
-            const matchedKey = Object.keys(CITY_COORDINATES).find(k => k.toLowerCase() === firstZone.toLowerCase());
-            if (matchedKey) return matchedKey;
-            return firstZone.charAt(0).toUpperCase() + firstZone.slice(1);
-          }
-          if (fullText.includes('kerala')) {
-            return 'Kerala';
-          }
-        }
-        return region || 'Global';
+        return 'Global';
       };
 
       // Group articles by pinpoint target location
@@ -859,55 +876,69 @@ export default function MapsPage({
             if (matchedKey) coords = CITY_COORDINATES[matchedKey];
           }
 
-          // 2. Try in-memory & localStorage cache (only if valid)
+          // 2. Try localStorage cache
           if (!coords && cache[targetLoc]) {
-            const cached = cache[targetLoc];
-            // Don't accept cached New Delhi coords for Kerala queries
-            if (!(targetLoc.toLowerCase().includes('kerala') && cached.lat > 20.0)) {
-              coords = cached;
-            }
+            coords = cache[targetLoc];
           }
 
-          // 3. Query Nominatim API if not found
+          // 3. Query Nominatim API with smart query cleaning + progressive fallbacks.
+          // Region strings from AI can be complex, e.g.:
+          //   "SOUTH BENGAL, INDIA (JHARGRAM, SOUTH 24 PARGANAS, PASCHIM AND PURBA MEDINIPUR DISTRICTS)"
+          // We strip parenthetical content and try simpler forms if the first query fails.
           if (!coords) {
             try {
-              const isKeralaRelated = arts.some(art => {
-                const txt = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.ai?.region || '')).toLowerCase();
-                return txt.includes('kerala') || txt.includes('idukki') || txt.includes('pathanamthitta') || txt.includes('wayanad');
-              });
+              const LAND_TYPES = ['city', 'town', 'village', 'suburb', 'municipality',
+                'administrative', 'county', 'state_district', 'province', 'quarter', 'state'];
 
-              const searchQuery = isKeralaRelated && !targetLoc.toLowerCase().includes('kerala')
-                ? `${targetLoc}, Kerala, India`
-                : targetLoc;
+              // Build a clean, progressively simpler query list from the region string
+              const buildQueryVariants = (raw) => {
+                // Step 1: Remove anything in parentheses (sub-district detail that confuses Nominatim)
+                const stripped = raw.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+                // Step 2: Split by comma, take meaningful parts
+                const parts = stripped.split(',').map(p => p.trim()).filter(Boolean);
+                const variants = [
+                  stripped,                          // "SOUTH BENGAL, INDIA"
+                  parts.slice(0, 2).join(', '),      // "SOUTH BENGAL, INDIA" (first 2 parts)
+                  parts[0],                          // "SOUTH BENGAL" (just the primary location)
+                ];
+                // Deduplicate while preserving order
+                return [...new Set(variants.filter(v => v && v.length > 1))];
+              };
 
-              const encoded = encodeURIComponent(searchQuery);
-              const res = await fetch(
-                `/nominatim/search?q=${encoded}&format=json&limit=5&addressdetails=1`,
-                { headers: { 'Accept-Language': 'en' } }
-              );
-              if (res.ok) {
-                const data = await res.json();
-                if (data && data.length > 0) {
-                  const LAND_TYPES = ['city', 'town', 'village', 'suburb', 'municipality',
-                    'administrative', 'county', 'state_district', 'province', 'quarter'];
-                  const landResult = data.find(d =>
-                    LAND_TYPES.some(t => (d.type || '').toLowerCase().includes(t) ||
-                      (d.addresstype || '').toLowerCase().includes(t))
-                  );
-                  const chosen = landResult || data[0];
-                  coords = { lat: parseFloat(chosen.lat), lon: parseFloat(chosen.lon) };
-                  cache[targetLoc] = coords;
-                  geocodeCacheRef.current[targetLoc] = coords;
-                  localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
+              const queryVariants = buildQueryVariants(targetLoc);
+
+              for (const query of queryVariants) {
+                if (coords) break;
+                const encoded = encodeURIComponent(query);
+                const res = await fetch(
+                  `/nominatim/search?q=${encoded}&format=json&limit=5&addressdetails=1`,
+                  { headers: { 'Accept-Language': 'en' } }
+                );
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data && data.length > 0) {
+                    const landResult = data.find(d =>
+                      LAND_TYPES.some(t => (d.type || '').toLowerCase().includes(t) ||
+                        (d.addresstype || '').toLowerCase().includes(t))
+                    );
+                    const chosen = landResult || data[0];
+                    coords = { lat: parseFloat(chosen.lat), lon: parseFloat(chosen.lon) };
+                    cache[targetLoc] = coords;
+                    geocodeCacheRef.current[targetLoc] = coords;
+                    localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
+                    console.log(`[Maps] Geocoded "${targetLoc}" via query "${query}" →`, coords);
+                  }
                 }
+                // Rate-limit: wait between Nominatim calls
+                if (!coords) await new Promise(r => setTimeout(r, 1100));
               }
-              await new Promise(r => setTimeout(r, 1100));
+              if (!coords) await new Promise(r => setTimeout(r, 1100));
             } catch (e) {
               console.error('[Maps] Geocode failed for targetLoc:', targetLoc, e);
             }
           }
 
-          // 4. Substring matching fallback (excluding broad terms)
+          // 4. Last-resort: substring match in CITY_COORDINATES (no text scanning, only the region key)
           if (!coords) {
             const locLower = targetLoc.toLowerCase();
             const sortedKeys = Object.keys(CITY_COORDINATES).sort((a, b) => b.length - a.length);
@@ -915,40 +946,12 @@ export default function MapsPage({
               !BROAD_GEO_TERMS.has(k.toLowerCase()) &&
               (locLower.includes(k.toLowerCase()) || k.toLowerCase().includes(locLower))
             );
-            if (matchKey) {
-              coords = CITY_COORDINATES[matchKey];
-            }
+            if (matchKey) coords = CITY_COORDINATES[matchKey];
           }
         }
 
-        // ── KERALA SPATIAL BOUNDING GUARD ──
-        // Ensure any Kerala-related article ALWAYS plots strictly inside Kerala borders (not in New Delhi or Nagpur)
         arts.forEach((art, idx) => {
-          const text = ((art.title || '') + ' ' + (art.ai?.reasoning || '') + ' ' + (art.ai?.region || '') + ' ' + targetLoc).toLowerCase();
-          const isKerala = text.includes('kerala') || text.includes('idukki') || text.includes('pathanamthitta') || text.includes('wayanad') || text.includes('kochi') || text.includes('trivandrum') || text.includes('thiruvananthapuram');
-
           let finalCoords = coords;
-          if (isKerala) {
-            const isOutsideKerala = !finalCoords ||
-              finalCoords.lat < KERALA_BOUNDS.minLat || finalCoords.lat > KERALA_BOUNDS.maxLat ||
-              finalCoords.lon < KERALA_BOUNDS.minLon || finalCoords.lon > KERALA_BOUNDS.maxLon;
-
-            if (isOutsideKerala) {
-              // Try matching specific Kerala district from text
-              const foundDistrictKey = Object.keys(CITY_COORDINATES).find(k => {
-                const kLower = k.toLowerCase();
-                return kLower !== 'india' && kLower !== 'delhi' && text.includes(kLower) && CITY_COORDINATES[k].lat >= 8.0 && CITY_COORDINATES[k].lat <= 13.0;
-              });
-
-              if (foundDistrictKey) {
-                finalCoords = CITY_COORDINATES[foundDistrictKey];
-              } else if (targetZone && CITY_COORDINATES[targetZone]) {
-                finalCoords = CITY_COORDINATES[targetZone];
-              } else {
-                finalCoords = CITY_COORDINATES["Idukki"] || CITY_COORDINATES["Kerala"];
-              }
-            }
-          }
 
           if (!finalCoords) {
             finalCoords = { lat: 25.0, lon: -35.0 };
