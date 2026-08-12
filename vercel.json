@@ -6,7 +6,7 @@
     },
     {
       "source": "/news-proxy",
-      "destination": "https://newsapi.ai/api/v1/article/getArticles"
+      "destination": "/api/news-proxy.js"
     },
     {
       "source": "/groq/:path*",
