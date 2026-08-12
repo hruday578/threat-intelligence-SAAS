@@ -236,7 +236,7 @@ Before generating JSON, evaluate each article through this 10-step operational d
 === CLASSIFICATION OPERATIONAL MANDATES ===
 - OFFICIAL FORECASTS = ALERT ALWAYS: Any watch, warning, advisory, or forecast issued by a meteorological or emergency authority for today or upcoming days is ALWAYS ALERT, never INFORMATIVE.
 - PREPAREDNESS & TRACKING = ALERT ALWAYS: Reports of authorities tracking storms, managing reservoir releases, or issuing precautionary notices = ALERT.
-- OLD / PAST THREATS = INFORMATIVE: If the event described is clearly in the past and the threat is over (e.g. comparing the article date to ${currentDate}), classify as INFORMATIVE, not ALERT.
+- OLD / PAST THREATS = INFORMATIVE: Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event (e.g. an earthquake that already happened, a storm that already passed, a flood that already receded), classify it as INFORMATIVE. If the threat is ongoing, recurring, or the article is a warning/advisory, still classify as ALERT.
 - PRE-INCIDENT MITIGATION FOCUS: "mitigation" and "citizen_action" MUST focus strictly on PRE-INCIDENT PREPAREDNESS & PREVENTATIVE ACTIONS (actions to take BEFORE impact to reduce harm). Never output "N/A", "Unknown", or vague text.
 
 === OUTPUT SCHEMA ===
@@ -1167,7 +1167,7 @@ function AppMain() {
         try {
           await new Promise(r => setTimeout(r, 500)); // Smooth throttle
 
-          const payload = chunk.map((a, idx) => ({ id: idx, title: a.title, body: (a.body || '').slice(0, 1000) }));
+          const payload = chunk.map((a, idx) => ({ id: idx, title: a.title, body: (a.body || '').slice(0, 1000), article_date: a.dateTime || a.date || '' }));
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 25000);

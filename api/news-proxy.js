@@ -3,6 +3,9 @@
 // 1. Vercel "rewrites" only forward GET — POST body is silently dropped.
 // 2. NewsAPI.ai blocks direct browser fetch (no CORS headers).
 
+// Extend Vercel function timeout (default 10s kills slow NewsAPI responses)
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   // Allow CORS from any origin (the Vercel frontend)
   res.setHeader('Access-Control-Allow-Origin', '*');
