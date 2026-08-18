@@ -876,12 +876,12 @@ function AppMain() {
   const reportsCount = articles.filter(a => a?.ai?.classification === 'INFORMATIVE').length;
 
   useEffect(() => {
-    if (!autoPilot || !isLoggedIn) return;
+    if (!autoPilot || !user) return;
     const interval = setInterval(() => {
       handleExecute(true);
     }, autoPilotInterval * 60 * 1000);
     return () => clearInterval(interval);
-  }, [autoPilot, autoPilotInterval, isLoggedIn, newsKey, aiKey, keywords, params, zonesInput, provider]);
+  }, [autoPilot, autoPilotInterval, user, newsKey, aiKey, keywords, params, zonesInput, provider]);
 
   const handleExecute = async (isAuto = false) => {
     if (!newsKey || !aiKey) return setError('Configuration Incomplete');
