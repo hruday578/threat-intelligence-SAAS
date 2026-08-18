@@ -1435,7 +1435,10 @@ export default function MapsPage({
         {/* Floating Toggle Button for Collapsed Panel */}
         {panelCollapsed && (
           <button onClick={() => setPanelCollapsed(false)} className="maps-panel-restore-btn" title="Open Operations Panel">
-            📊 COMMAND PANEL
+            <svg className="w-3.5 h-3.5 inline-block mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            COMMAND PANEL
           </button>
         )}
 
@@ -1449,17 +1452,30 @@ export default function MapsPage({
               </button>
             </div>
             <div className="overlay-tabs">
-              <button onClick={() => setActiveTab('threats')} className={`tab-btn ${activeTab === 'threats' ? 'active' : ''}`}>
-                📊 Threats ({filteredThreats.length})
+              <button onClick={() => setActiveTab('threats')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'threats' ? 'active' : ''}`}>
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Threats ({filteredThreats.length})
               </button>
-              <button onClick={() => setActiveTab('employees')} className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`}>
-                👥 Team ({filteredEmployees.length})
+              <button onClick={() => setActiveTab('employees')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'employees' ? 'active' : ''}`}>
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Team ({filteredEmployees.length})
               </button>
-              <button onClick={() => { setActiveTab('index'); setCountryFilter(null); }} className={`tab-btn ${activeTab === 'index' ? 'active' : ''}`}>
-                🌍 Index ({countryIndexList.length})
+              <button onClick={() => { setActiveTab('index'); setCountryFilter(null); }} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'index' ? 'active' : ''}`}>
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V11a2 2 0 012-2h1.065M12 21a9 9 0 100-18 9 9 0 000 18z" />
+                </svg>
+                Index ({countryIndexList.length})
               </button>
-              <button onClick={() => setActiveTab('settings')} className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}>
-                ⚙ Panel
+              <button onClick={() => setActiveTab('settings')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'settings' ? 'active' : ''}`}>
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Panel
               </button>
             </div>
             <div className="overlay-search">
@@ -1509,10 +1525,25 @@ export default function MapsPage({
                             <span className="item-time">{new Date(threat.date).toLocaleTimeString()}</span>
                           </div>
                           <h4 className="item-heading">{threat.title}</h4>
-                          <div className="item-meta">
-                            <span>🚨 {threat.ai?.hazard}</span>
-                            <span>📍 {threat.ai?.region}</span>
-                            <span>📰 {(() => {
+                          <div className="item-meta flex items-center gap-3">
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              {threat.ai?.hazard}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              {threat.ai?.region}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                              </svg>
+                              {(() => {
                               const sourceNames = [...new Set(threat.sources?.map(s => s.source?.title || s.source?.uri || 'Unknown Source'))];
                               return sourceNames.length > 1
                                 ? `${sourceNames[0]} + ${sourceNames.length - 1} more`
@@ -2121,7 +2152,7 @@ export default function MapsPage({
                 return (
                   <span key={art.id || idx} className={`ticker-item ${isAlert ? 'ticker-item--alert' : 'ticker-item--info'}`}>
                     <span className="ticker-dot" />
-                    <strong>{isAlert ? '🚨 ALERT' : 'ℹ REPORT'}:</strong> {art.ai?.hazard || 'Threat'} in {art.ai?.region || 'Unknown'} - {art.title}
+                    <strong>{isAlert ? 'CRITICAL ALERT' : 'FIELD REPORT'}:</strong> {art.ai?.hazard || 'Threat'} in {art.ai?.region || 'Unknown'} - {art.title}
                   </span>
                 );
               })
