@@ -66,12 +66,12 @@ export default function AuthPage() {
             <Logo className="h-24" />
           </div>
           <h1 className="text-xl font-black text-white uppercase tracking-widest">
-            {mode === 'signin' ? 'Analyst Portal Access' : 'Create SaaS Account'}
+            {mode === 'signin' ? 'Enterprise Analyst Portal' : 'Initialize Workspace'}
           </h1>
-          <p className="text-xs font-semibold text-slate-400">
+          <p className="text-xs font-semibold text-slate-400 leading-relaxed">
             {mode === 'signin'
-              ? 'Enter your organization credentials to access tactical threat intelligence'
-              : 'Start monitoring physical & cyber risks with AI automation'}
+              ? 'Authenticate to access your organization\'s real-time threat intelligence suite'
+              : 'Deploy AI-driven threat intelligence & automated risk monitoring for your enterprise'}
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function AuthPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Alex Vance"
+                placeholder="e.g. Executive Operations"
                 className="w-full h-12 bg-slate-800/90 border border-slate-700 rounded-xl px-4 text-xs font-bold text-white outline-none focus:border-red-500 transition-all"
               />
             </div>
@@ -133,21 +133,21 @@ export default function AuthPage() {
 
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">
-              Work Email Address
+              Corporate Email Address
             </label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="analyst@organization.com"
+              placeholder="analyst@enterprise.com"
               className="w-full h-12 bg-slate-800/90 border border-slate-700 rounded-xl px-4 text-xs font-bold text-white outline-none focus:border-red-500 transition-all"
             />
           </div>
 
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">
-              Access Password
+              Security Password
             </label>
             <input
               type="password"
@@ -174,9 +174,9 @@ export default function AuthPage() {
                 Processing...
               </span>
             ) : mode === 'signin' ? (
-              'Establish Secure Connection'
+              'Authenticate Workspace'
             ) : (
-              'Initialize Workspace'
+              'Create Enterprise Workspace'
             )}
           </button>
         </form>
