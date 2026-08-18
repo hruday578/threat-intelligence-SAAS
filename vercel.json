@@ -9,6 +9,10 @@
       "destination": "/api/news-proxy.js"
     },
     {
+      "source": "/ai-proxy",
+      "destination": "/api/ai-proxy.js"
+    },
+    {
       "source": "/groq/:path*",
       "destination": "https://api.groq.com/openai/v1/:path*"
     },

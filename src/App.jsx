@@ -13,6 +13,9 @@ import EarthquakeResponsePage from './EarthquakeResponsePage';
 import SystemLogsPage from './SystemLogsPage';
 
 import { TOP_SOURCES } from './data/sources';
+import { useAuth } from './contexts/AuthContext';
+import AuthPage from './pages/AuthPage';
+import { supabase } from './lib/supabase';
 
 //  Operational Constants 
 const TACTICAL_LIBRARY = [
@@ -681,9 +684,9 @@ class ErrorBoundary extends React.Component {
 //  Main Application 
 
 function AppMain() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, session, organization, member, loading: authLoading, signOut } = useAuth();
   const [configExpanded, setConfigExpanded] = useState(true);
-  const [newsKey, setNewsKey] = useState('');
+  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '');
   const [aiKey, setAiKey] = useState('');
   const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState(['wildfire']);
@@ -703,7 +706,7 @@ function AppMain() {
     try { localStorage.setItem('alertem_system_logs', JSON.stringify(systemLogs.slice(0, 300))); } catch (e) { console.error(e); }
   }, [systemLogs]);
 
-  const addLog = (type, title, message, details = null) => {
+  const addLog = async (type, title, message, details = null) => {
     const logEntry = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString(),
@@ -714,6 +717,21 @@ function AppMain() {
       details
     };
     setSystemLogs(prev => [logEntry, ...prev]);
+
+    if (organization?.id) {
+      try {
+        await supabase.from('system_logs').insert([{
+          org_id: organization.id,
+          user_id: user?.id,
+          log_type: type,
+          title: title || type,
+          message: message,
+          details: details
+        }]);
+      } catch (e) {
+        console.warn('Silent log sync warning:', e);
+      }
+    }
   };
 
   const setError = (msg) => {
@@ -1426,21 +1444,17 @@ function AppMain() {
     } finally { setLoading(false); }
   };
 
-  if (!isLoggedIn) {
+  if (authLoading) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white p-12 rounded-[3rem] border border-gray-100 shadow-2xl max-w-sm w-full space-y-10">
-          <div className="text-center space-y-4">
-            <div className="flex justify-center mb-8"><Logo className="h-32" /></div>
-          </div>
-          <form onSubmit={e => { e.preventDefault(); addLog('AUTH', 'User Signed In', 'Operational analyst session initialized successfully'); setIsLoggedIn(true); }} className="space-y-4">
-            <input type="email" placeholder="Analyst ID" className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold outline-none" defaultValue="admin@aertem.ia" />
-            <input type="password" placeholder="Access Key" className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold outline-none" defaultValue="password" />
-            <button className="w-full h-14 bg-red-600 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-lg active:scale-95 transition-all">Establish Connection</button>
-          </form>
-        </div>
+      <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white space-y-4 font-sans">
+        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Initializing AlertEm SaaS Session...</p>
       </div>
     );
+  }
+
+  if (!user) {
+    return <AuthPage />;
   }
 
   const renderLedgerItem = (art) => {
@@ -1512,8 +1526,21 @@ function AppMain() {
           <header className="px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-6">
               <Logo className="h-16" />
+              {organization && (
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                  <span className="text-[10px] font-black text-red-700 uppercase tracking-wider">{organization.name}</span>
+                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-600 text-white uppercase">{organization.plan || 'Free'}</span>
+                </div>
+              )}
             </div>
-            <button onClick={() => { addLog('AUTH', 'User Signed Out', 'Operational analyst session ended'); setIsLoggedIn(false); }} className="text-[10px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest">Sign Out</button>
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] font-black text-gray-900 leading-none">{user?.email}</p>
+                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{member?.role || 'Analyst'}</p>
+              </div>
+              <button onClick={() => { addLog('AUTH', 'User Signed Out', 'Operational analyst session ended'); signOut(); }} className="text-[10px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest px-3 py-1.5 bg-gray-50 hover:bg-red-50 border border-gray-100 hover:border-red-200 rounded-xl transition-all">Sign Out</button>
+            </div>
           </header>
 
           <div className="p-4 pb-1 shrink-0">
