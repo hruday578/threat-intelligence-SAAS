@@ -267,8 +267,9 @@ const DURATIONS = [
   { label: '30D', value: '30d', days: 30 }
 ];
 const PROVIDERS = [
-  { id: 'groq-8b', label: 'GROQ 8B FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
-  { id: 'groq-70b', label: 'GROQ 70B', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
+  { id: 'groq-20b', label: 'GROQ 20B FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-20b' },
+  { id: 'groq-120b', label: 'GROQ 120B', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b' },
+  { id: 'groq-compound', label: 'GROQ COMPOUND', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'groq/compound' },
   { id: 'openrouter', label: 'OPENROUTER', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.3-70b-instruct:free' },
   { id: 'deepseek', label: 'DEEPSEEK', endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' }
 ];
@@ -684,7 +685,7 @@ function AppMain() {
   const [configExpanded, setConfigExpanded] = useState(true);
   const [newsKey, setNewsKey] = useState('');
   const [aiKey, setAiKey] = useState('');
-  const [provider, setProvider] = useState('groq-8b');
+  const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState(['wildfire']);
   const [zonesInput, setZonesInput] = useState('');
   const [params, setParams] = useState({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] });
