@@ -6,9 +6,9 @@ import { COUNTRIES } from './data/countries';
 
 // ── THREAT LEVEL CONSTANTS ─────────────────────────────────────────────────
 const THREAT_LEVEL = {
-  RED:    { label: 'RED ALERT',   color: 'rgba(220,38,38,0.55)',  border: '#dc2626', emoji: '🔴' },
-  YELLOW: { label: 'YELLOW ALERT',color: 'rgba(234,179,8,0.45)', border: '#ca8a04', emoji: '🟡' },
-  GREEN:  { label: 'ALL CLEAR',   color: 'rgba(34,197,94,0.3)',  border: '#16a34a', emoji: '🟢' },
+  RED:    { label: 'RED ALERT',   color: 'rgba(220,38,38,0.55)',  border: '#dc2626', emoji: '●' },
+  YELLOW: { label: 'YELLOW ALERT',color: 'rgba(234,179,8,0.45)', border: '#ca8a04', emoji: '●' },
+  GREEN:  { label: 'ALL CLEAR',   color: 'rgba(34,197,94,0.3)',  border: '#16a34a', emoji: '●' },
 };
 
 // ── COUNTRY NAME EXTRACTOR ─────────────────────────────────────────────────
@@ -1266,24 +1266,6 @@ export default function MapsPage({
     });
   };
 
-  const sendBroadcast = async (threat, employeesToNotify) => {
-    try {
-      const response = await fetch('/api/broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threat, employees: employeesToNotify }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        alert(`Broadcast sent! Preview URL: ${data.previewUrl || 'Check your SMTP inbox'}`);
-      } else {
-        alert(`Failed to send broadcast: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Broadcast failed:', error);
-      alert('Failed to send broadcast. Is the backend server running?');
-    }
-  };
 
   // 10. Handler to deploy analyst-placed custom threats
   const handlePlotCustomThreat = () => {
@@ -1338,7 +1320,7 @@ export default function MapsPage({
     return L.divIcon({
       className: 'alert-map-marker',
       html: `
-        <div class="alert-marker-icon">⚠</div>
+        <div class="alert-marker-icon"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
         <div class="alert-marker-ping"></div>
       `,
       iconSize: [28, 28],
@@ -1350,7 +1332,7 @@ export default function MapsPage({
     return L.divIcon({
       className: 'info-map-marker',
       html: `
-        <div class="info-marker-icon">ℹ</div>
+        <div class="info-marker-icon"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
       `,
       iconSize: [20, 20],
       iconAnchor: [10, 10]
@@ -1363,7 +1345,7 @@ export default function MapsPage({
     return L.divIcon({
       className: 'global-map-marker',
       html: `
-        <div class="global-marker-icon ${isAlert ? 'red' : 'blue'}">🌐</div>
+        <div class="global-marker-icon ${isAlert ? 'red' : 'blue'}"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
         ${isAlert ? '<div class="alert-marker-ping"></div>' : ''}
       `,
       iconSize: [28, 28],
@@ -1563,8 +1545,8 @@ export default function MapsPage({
               <div className="tab-panel flex-col">
                 {countryFilter && (
                   <div style={{ padding: '6px 10px', background: 'rgba(234,179,8,0.12)', borderBottom: '1px solid rgba(234,179,8,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: '800', color: '#ca8a04' }}>🔍 FILTERED: {countryFilter}</span>
-                    <button onClick={() => setCountryFilter(null)} style={{ fontSize: '9px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: '800' }}>✕ Clear</button>
+                    <span style={{ fontSize: '9px', fontWeight: '800', color: '#ca8a04', display: 'flex', alignItems: 'center', gap: '3px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> FILTERED: {countryFilter}</span>
+                    <button onClick={() => setCountryFilter(null)} style={{ fontSize: '9px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '2px' }}><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Clear</button>
                   </div>
                 )}
                 <div className="scrollable-list">
@@ -1614,7 +1596,7 @@ export default function MapsPage({
                   {/* High Risk Section */}
                   {highRiskEmployees.length > 0 && (
                     <div className="list-section">
-                      <div className="section-header danger">⚠️ HIGH RISK WARNING ({highRiskEmployees.length})</div>
+                      <div className="section-header danger" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> HIGH RISK WARNING ({highRiskEmployees.length})</div>
                       {highRiskEmployees.map((emp, idx) => (
                         <div
                           key={`high-emp-${idx}`}
@@ -1637,7 +1619,6 @@ export default function MapsPage({
                                 e.stopPropagation();
                                 pushToEmployee(emp.closestAlert.id, emp.id);
                                 onPushAlert(emp.closestAlert.id);
-                                sendBroadcast(emp.closestAlert, [emp]);
                               }}
                               className="emp-push-btn"
                             >
@@ -1669,7 +1650,7 @@ export default function MapsPage({
                             </div>
                           </div>
                           <div className="item-meta">
-                            <span>📍 {emp.state}, {emp.country}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> {emp.state}, {emp.country}</span>
                           </div>
                         </div>
                       ))
@@ -1686,7 +1667,7 @@ export default function MapsPage({
                   <h4 className="settings-title">Tactical Live Simulator</h4>
                   <p className="settings-desc">Simulate a live satellite threat stream to test warning logic & notifications.</p>
                   <button onClick={toggleLiveDemo} className={`simulator-toggle-btn ${liveDemoActive ? 'active' : ''}`}>
-                    {liveDemoActive ? '🛑 Stop Demo Stream' : '📡 Start Live Demo Feed'}
+                    {liveDemoActive ? <><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Stop Demo Stream</> : <><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg> Start Live Demo Feed</>}
                   </button>
                   {liveDemoActive && (
                     <p className="simulator-pulse-note">Incoming threat events streaming every 20 seconds...</p>
@@ -1731,17 +1712,17 @@ export default function MapsPage({
                     </label>
                     <label className="checkbox-label">
                       <input type="checkbox" checked={showChoropleth} onChange={e => setShowChoropleth(e.target.checked)} />
-                      <span className="checkbox-custom" style={{ background: showChoropleth ? '#dc2626' : undefined }} /> 🌍 National Alert Levels
+                      <span className="checkbox-custom" style={{ background: showChoropleth ? '#dc2626' : undefined }} /> <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px' }}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> National Alert Levels
                     </label>
                   </div>
                 </div>
 
                 <div className="settings-section" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
-                  <span style={{ fontSize: '8px', fontWeight: '900', color: '#10b981', display: 'block', marginBottom: '2px' }}>💡 COMMAND PROTIP</span>
+                  <span style={{ fontSize: '8px', fontWeight: '900', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> COMMAND PROTIP</span>
                   <p style={{ fontSize: '8px', color: '#9ca3af', lineHeight: '1.3' }}>Double-click anywhere on the map to manually plot coordinates and deploy custom threat alerts!</p>
                 </div>
                 <div className="settings-section" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
-                  <span style={{ fontSize: '8px', fontWeight: '900', color: '#f59e0b', display: 'block', marginBottom: '4px' }}>🗺 GEOCODE CACHE</span>
+                  <span style={{ fontSize: '8px', fontWeight: '900', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '4px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg> GEOCODE CACHE</span>
                   <p style={{ fontSize: '8px', color: '#9ca3af', lineHeight: '1.3', marginBottom: '8px' }}>If markers appear in the sea, clear the cache to force fresh land-accurate location lookups.</p>
                   <button
                     onClick={() => {
@@ -1757,7 +1738,7 @@ export default function MapsPage({
                       cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
                     }}
                   >
-                    🗑 Clear Geocode Cache
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Clear Geocode Cache
                   </button>
                 </div>
               </div>
@@ -1774,27 +1755,27 @@ export default function MapsPage({
             </div>
             <div className="modal-body">
               <div className="modal-coord-badge">
-                📍 LAT: {placementCoords.lat.toFixed(4)}, LON: {placementCoords.lng.toFixed(4)}
+                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> LAT: {placementCoords.lat.toFixed(4)}, LON: {placementCoords.lng.toFixed(4)}
               </div>
               
               <div className="modal-field">
                 <label>Classification</label>
                 <select value={customClass} onChange={e => setCustomClass(e.target.value)}>
-                  <option value="ALERT">🚨 ALERT (Critical threat)</option>
-                  <option value="INFORMATIVE">ℹ REPORT (Informational update)</option>
+                  <option value="ALERT">⚠ ALERT (Critical threat)</option>
+                  <option value="INFORMATIVE">↳ REPORT (Informational update)</option>
                 </select>
               </div>
 
               <div className="modal-field">
                 <label>Hazard Category</label>
                 <select value={customHazard} onChange={e => setCustomHazard(e.target.value)}>
-                  <option value="Wildfire">🔥 Wildfire</option>
-                  <option value="Earthquake">🌋 Earthquake</option>
-                  <option value="Flooding">🌊 Flooding</option>
-                  <option value="Cyberattack">💻 Cyberattack</option>
-                  <option value="Industrial Fire">🏭 Industrial Fire</option>
-                  <option value="Cyclone">🌀 Cyclone</option>
-                  <option value="Hazardous Spill">☣ Hazardous Spill</option>
+                  <option value="Wildfire">▲ Wildfire</option>
+                  <option value="Earthquake">◈ Earthquake</option>
+                  <option value="Flooding">≋ Flooding</option>
+                  <option value="Cyberattack">⌨ Cyberattack</option>
+                  <option value="Industrial Fire">◉ Industrial Fire</option>
+                  <option value="Cyclone">↺ Cyclone</option>
+                  <option value="Hazardous Spill">⊛ Hazardous Spill</option>
                 </select>
               </div>
 
@@ -1809,7 +1790,7 @@ export default function MapsPage({
               </div>
 
               <button onClick={handlePlotCustomThreat} className="plot-btn">
-                Plot coordinates & Broadcast
+                Plot coordinates
               </button>
             </div>
           </div>
@@ -1883,7 +1864,7 @@ export default function MapsPage({
               >
                 <Popup>
                   <div className="maps-popup-content">
-                    <span className="maps-popup-badge maps-popup-badge--alert">⚠️ CLOSE THREAT PROXIMITY</span>
+                    <span className="maps-popup-badge maps-popup-badge--alert" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> CLOSE THREAT PROXIMITY</span>
                     <h4 className="font-bold text-red-600 mt-1">{emp.firstName} {emp.lastName} at Risk</h4>
                     <p className="text-xs text-gray-400 mt-1">Located {Math.round(emp.distanceToAlert)}km from <strong>{emp.closestAlert.ai?.hazard}</strong> in {emp.closestAlert.ai?.region}.</p>
                   </div>
@@ -1912,7 +1893,7 @@ export default function MapsPage({
                     className: 'target-zone-pin',
                     html: `
                       <div style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 12px; font-weight: 900; font-size: 10px; border: 2px solid white; box-shadow: 0 4px 12px rgba(37,99,235,0.5); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-                        🎯 TARGET: ${targetZoneMarker.label.toUpperCase()} (${radius > 0 ? radius : warnRadius}KM)
+                        ◎ TARGET: ${targetZoneMarker.label.toUpperCase()} (${radius > 0 ? radius : warnRadius}KM)
                       </div>
                     `,
                     iconSize: [140, 30],
@@ -1921,7 +1902,7 @@ export default function MapsPage({
                 >
                   <Popup>
                     <div className="maps-popup-content">
-                      <span className="maps-popup-badge maps-popup-badge--info">🎯 TARGET ZONE</span>
+                      <span className="maps-popup-badge maps-popup-badge--info" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> TARGET ZONE</span>
                       <h4 className="font-bold text-blue-600 mt-1">{targetZoneMarker.label}</h4>
                       <p className="text-xs text-gray-400 mt-1">Search radius: <strong>{radius > 0 ? radius : warnRadius} km</strong></p>
                     </div>
@@ -1951,7 +1932,7 @@ export default function MapsPage({
                 maxWidth: '90%'
               }}>
                 <span style={{ fontSize: '10px', fontWeight: 900, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  🎯 TARGET: {targetZoneMarker.label.toUpperCase()} ({activeRadius}KM RADIUS)
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> TARGET: {targetZoneMarker.label.toUpperCase()} ({activeRadius}KM RADIUS)
                 </span>
                 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', color: strictRadiusFilter ? '#38bdf8' : '#9ca3af' }}>
@@ -2037,7 +2018,7 @@ export default function MapsPage({
                   {activePopup.type === 'threat' ? (
                     <>
                       <span className={`maps-popup-badge ${activePopup.classification === 'ALERT' ? 'maps-popup-badge--alert' : 'maps-popup-badge--info'}`}>
-                        {activePopup.classification === 'ALERT' ? '⚠ ALERT' : 'ℹ REPORT'}
+                        {activePopup.classification === 'ALERT' ? <><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>ALERT</> : <><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>REPORT</>}
                       </span>
                       {pushedAlerts.has(activePopup.id) && (
                         <span className="maps-popup-badge" style={{ background: '#10b981', color: 'white', marginLeft: '5px' }}>PUSHED</span>
@@ -2062,35 +2043,16 @@ export default function MapsPage({
                           <p style={{ fontSize: '9px', color: '#991b1b', margin: '2px 0 0' }}>{activePopup.mitigation}</p>
                         </div>
                       )}
-                      
-                      {activePopup.classification === 'ALERT' && (
-                        <div style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => {
-                              onPushAlert(activePopup.id);
-                              const affectedEmployees = highRiskEmployees.filter(emp => emp.closestAlert?.id === activePopup.id);
-                              if (affectedEmployees.length > 0) {
-                                sendBroadcast(activePopup, affectedEmployees);
-                              } else {
-                                alert('No employees are currently in the high-risk zone for this alert.');
-                              }
-                            }}
-                            className="maps-popup-push-btn"
-                          >
-                            Broadcast Alert
-                          </button>
-                        </div>
-                      )}
                     </>
                   ) : (
                     <>
                       <span className={`maps-popup-badge ${activePopup.riskLevel === 'HIGH' ? 'maps-popup-badge--alert' : 'maps-popup-badge--info'}`} style={{ background: activePopup.riskLevel === 'HIGH' ? '#ef4444' : '#10b981', color: 'white' }}>
-                        {activePopup.riskLevel === 'HIGH' ? '⚠️ AT RISK' : '👥 TEAM'}
+                        {activePopup.riskLevel === 'HIGH' ? <><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>AT RISK</> : <><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>TEAM</>}
                       </span>
                       <h3 className="maps-popup-title">{activePopup.firstName} {activePopup.lastName}</h3>
                       <p className="maps-popup-region" style={{ textTransform: 'none', letterSpacing: 'normal' }}>{activePopup.company}</p>
-                      <p className="maps-popup-text" style={{ fontSize: '9px', color: '#6b7280', margin: '2px 0' }}>📧 {activePopup.companyEmail}</p>
-                      <p className="maps-popup-text" style={{ fontSize: '9px', color: '#6b7280', margin: '2px 0' }}>📞 {activePopup.phone}</p>
+                      <p className="maps-popup-text" style={{ fontSize: '9px', color: '#6b7280', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '3px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> {activePopup.companyEmail}</p>
+                      <p className="maps-popup-text" style={{ fontSize: '9px', color: '#6b7280', margin: '2px 0', display: 'flex', alignItems: 'center', gap: '3px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l.82-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 17z"/></svg> {activePopup.phone}</p>
                       
                       {activePopup.riskLevel === 'HIGH' && (
                         <div style={{ marginTop: '8px', background: '#fff5f5', border: '1px solid #ffe3e3', padding: '6px', borderRadius: '4px' }}>
@@ -2101,7 +2063,6 @@ export default function MapsPage({
                             onClick={() => {
                               pushToEmployee(activePopup.closestAlert.id, activePopup.id);
                               onPushAlert(activePopup.closestAlert.id);
-                              sendBroadcast(activePopup.closestAlert, [activePopup]);
                             }}
                             className="maps-popup-push-btn"
                             style={{ width: '100%', marginTop: '6px', background: '#e53e3e' }}
@@ -2145,7 +2106,7 @@ export default function MapsPage({
         <div className="maps-ticker-wrapper">
           <div className="maps-ticker-content">
             {combinedArticles.length === 0 ? (
-              <span className="ticker-item" style={{ color: '#9ca3af' }}>📡 SYSTEM ONLINE: STANDBY FOR SCANS OR TOGGLE THE LIVE FEED SIMULATOR...</span>
+              <span className="ticker-item" style={{ color: '#9ca3af', display: 'inline-flex', alignItems: 'center', gap: '5px' }}><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg> SYSTEM ONLINE: STANDBY FOR SCANS OR TOGGLE THE LIVE FEED SIMULATOR...</span>
             ) : (
               combinedArticles.slice(0, 10).map((art, idx) => {
                 const isAlert = art.ai?.classification === 'ALERT';

@@ -407,9 +407,56 @@ const EMPTY_VENDOR   = { vendor_name: '', vendor_country: '', vendor_city: '', g
 
 const STORAGE_KEY = 'alertem_risk_profiles';
 
+const SAMPLE_RECORD = {
+  id: 101,
+  saved_at: new Date().toISOString(),
+  risk_score: 58,
+  profile: {
+    company_name: 'Apex Energy & Tech Corp',
+    industry: 'Energy & Utilities',
+    hq_country: 'United Arab Emirates',
+    hq_city: 'Dubai',
+    hq_state: 'Dubai',
+    hq_address_line1: 'Suite 401, Al Saada Tower',
+    hq_address_line2: 'Business Bay Main Boulevard',
+    hq_area: 'Business Bay',
+    hq_pincode: '00000',
+    hq_lat: '25.185',
+    hq_lng: '55.275',
+    num_employees: '4500',
+    annual_revenue: '120000000',
+    critical_apps: '18',
+    backup_strategy: 'Daily Cloud',
+    key_systems: ['SAP S/4HANA', 'Salesforce CRM', 'SCADA Energy Grid', 'Microsoft 365', 'CrowdStrike Falcon'],
+    cloud_providers: ['AWS', 'Microsoft Azure'],
+    mfa_implemented: true
+  },
+  locations: [
+    { country: 'United Arab Emirates', city: 'Dubai', location_type: 'Data Center', headcount: '800', radius: 100, criticality: 'High', notes: 'Primary Regional Operation Center & Cloud Node' },
+    { country: 'India', city: 'Mumbai', location_type: 'Regional Office', headcount: '1200', radius: 100, criticality: 'High', notes: 'Global Engineering & Support Hub' },
+    { country: 'United States', city: 'Houston', location_type: 'Plant', headcount: '650', radius: 100, criticality: 'High', notes: 'Energy Refining & Distribution Center' },
+    { country: 'Singapore', city: 'Singapore', location_type: 'Logistics Hub', headcount: '350', radius: 100, criticality: 'Medium', notes: 'APAC Supply Chain Gateway' }
+  ],
+  vendors: [
+    { vendor_name: 'TSMC Silicon Foundry', vendor_country: 'Taiwan', vendor_city: 'Hsinchu', goods: ['Microchips', 'Semiconductors'], dependency_level: 'Critical', single_source: true, notes: 'Sole supplier for custom SCADA microchips' },
+    { vendor_name: 'Reliance Energy Systems', vendor_country: 'India', vendor_city: 'Mumbai', goods: ['Power Grid Components'], dependency_level: 'Critical', single_source: false, notes: 'Primary transformer and substation supplier' },
+    { vendor_name: 'Siemens Industrial Automation', vendor_country: 'Germany', vendor_city: 'Munich', goods: ['Turbines', 'Sensors'], dependency_level: 'Important', single_source: true, notes: 'Automated turbine control units' },
+    { vendor_name: 'Straits Logistics Ltd', vendor_country: 'Singapore', vendor_city: 'Singapore', goods: ['Freight Shipping', 'Warehousing'], dependency_level: 'Standard', single_source: false, notes: 'Port shipping partner' }
+  ]
+};
+
 //  Utility helpers 
 function loadProfiles() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  try {
+    const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!list || list.length === 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([SAMPLE_RECORD]));
+      return [SAMPLE_RECORD];
+    }
+    return list;
+  } catch {
+    return [SAMPLE_RECORD];
+  }
 }
 function saveProfiles(profiles) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
@@ -705,17 +752,40 @@ export default function RiskAssessmentPage({ articles = [] }) {
 
   // Load profiles on mount
   useEffect(() => {
-    setSavedProfiles(loadProfiles());
+    const list = loadProfiles();
+    setSavedProfiles(list);
+    if (list.length > 0 && !profile.company_name) {
+      handleLoad(list[0]);
+    }
   }, []);
 
   const riskScore = computeRiskScore(profile, locations, vendors);
 
-  const activeThreats = (articles || []).filter(a =>
-    a.ai?.classification === 'ALERT' && (
-      locations.some(item => checkThreatMatch(item, a)) ||
-      vendors.some(item => regionMatchesText(a.ai?.region || '', item.vendor_city || '', item.vendor_country || ''))
-    )
-  );
+  const itDependencies = [
+    ...(profile.key_systems || []),
+    ...(profile.cloud_providers || [])
+  ].filter(Boolean);
+
+  const activeThreats = (articles || []).filter(a => {
+    if (a.ai?.classification !== 'ALERT') return false;
+
+    // 1. Physical location match
+    const locMatch = locations.some(item => checkThreatMatch(item, a));
+
+    // 2. Vendor match
+    const vendMatch = vendors.some(item => regionMatchesText(a.ai?.region || '', item.vendor_city || '', item.vendor_country || ''));
+
+    // 3. IT System / Cloud Provider match (e.g. Microsoft, Azure, AWS, SAP, Salesforce)
+    const textToSearch = `${a.title || ''} ${a.ai?.hazard || ''} ${a.ai?.reasoning || ''} ${a.body || ''}`.toLowerCase();
+    const itMatch = itDependencies.some(sys => {
+      const name = sys.toLowerCase().trim();
+      if (!name) return false;
+      const words = name.split(' ').filter(w => w.length > 2);
+      return words.some(w => textToSearch.includes(w));
+    });
+
+    return locMatch || vendMatch || itMatch;
+  });
 
   //  Persistence helpers 
   const handleSave = () => {
@@ -746,11 +816,14 @@ export default function RiskAssessmentPage({ articles = [] }) {
   };
 
   const handleDelete = (id) => {
-    const profiles = loadProfiles().filter(p => p.id !== id);
-    saveProfiles(profiles);
-    setSavedProfiles(profiles);
-    if (activeProfileId === id) {
-      setProfile({ ...EMPTY_PROFILE }); setLocations([]); setVendors([]); setActiveProfileId(null);
+    if (!id) return;
+    if (window.confirm("Are you sure you want to delete this company risk profile? This action cannot be undone.")) {
+      const profiles = loadProfiles().filter(p => p.id !== id);
+      saveProfiles(profiles);
+      setSavedProfiles(profiles);
+      if (activeProfileId === id) {
+        setProfile({ ...EMPTY_PROFILE }); setLocations([]); setVendors([]); setActiveProfileId(null);
+      }
     }
   };
 
@@ -785,7 +858,7 @@ export default function RiskAssessmentPage({ articles = [] }) {
   //  Step renderer 
   const renderStep = () => {
     switch (step) {
-      case 'profile': return <StepProfile profile={profile} setP={setP} />;
+      case 'profile': return <StepProfile profile={profile} setP={setP} activeProfileId={activeProfileId} handleDelete={handleDelete} />;
       case 'locations': return (
         <StepLocations
           locations={locations} setLocations={setLocations}
@@ -804,7 +877,7 @@ export default function RiskAssessmentPage({ articles = [] }) {
           activeThreats={activeThreats}
         />
       );
-      case 'it': return <StepIT profile={profile} setP={setP} />;
+      case 'it': return <StepIT profile={profile} setP={setP} activeThreats={activeThreats} />;
       case 'summary': return (
         <StepSummary
           profile={profile} locations={locations} vendors={vendors}
@@ -840,6 +913,19 @@ export default function RiskAssessmentPage({ articles = [] }) {
           <button onClick={() => setShowProfileList(!showProfileList)} className="ra-btn ra-btn-ghost">
              Profiles ({savedProfiles.length})
           </button>
+          {activeProfileId && (
+            <button
+              onClick={() => handleDelete(activeProfileId)}
+              className="ra-btn"
+              style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+              title="Delete current active profile"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-1px', marginRight: '4px' }}>
+                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              </svg>
+              Delete Profile
+            </button>
+          )}
           <button onClick={handleSave} className="ra-btn ra-btn-primary">
             {saveStatus || ' Save Profile'}
           </button>
@@ -849,9 +935,27 @@ export default function RiskAssessmentPage({ articles = [] }) {
       {/*  Saved Profiles Dropdown  */}
       {showProfileList && (
         <div className="ra-profile-list">
-          <div className="ra-profile-list-header">
+          <div className="ra-profile-list-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span>Saved Profiles</span>
-            <button onClick={handleNew} className="ra-btn ra-btn-sm">＋ New</button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => {
+                  const list = loadProfiles();
+                  const exists = list.find(p => p.id === SAMPLE_RECORD.id);
+                  if (!exists) {
+                    const updated = [SAMPLE_RECORD, ...list];
+                    saveProfiles(updated);
+                    setSavedProfiles(updated);
+                  }
+                  handleLoad(SAMPLE_RECORD);
+                }}
+                className="ra-btn ra-btn-sm"
+                style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}
+              >
+                ⚡ Load Sample Profile
+              </button>
+              <button onClick={handleNew} className="ra-btn ra-btn-sm">＋ New</button>
+            </div>
           </div>
           {savedProfiles.length === 0 && <p className="ra-empty-state">No saved profiles yet.</p>}
           {savedProfiles.map(rec => {
@@ -866,7 +970,19 @@ export default function RiskAssessmentPage({ articles = [] }) {
                 <span className="ra-profile-score-badge" style={{ color: sc.text, background: sc.bg }}>
                   {rec.risk_score}/100
                 </span>
-                <button onClick={() => handleDelete(rec.id)} className="ra-btn-icon-del" title="Delete"></button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(rec.id);
+                  }}
+                  className="ra-btn-icon-del"
+                  title="Delete Profile"
+                  style={{ color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
               </div>
             );
           })}
@@ -923,7 +1039,7 @@ export default function RiskAssessmentPage({ articles = [] }) {
 // 
 // STEP 1 — Company Profile
 // 
-function StepProfile({ profile, setP }) {
+function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
   return (
     <div className="ra-form-grid">
       <div className="ra-section-card ra-section-card--full">
@@ -1037,6 +1153,49 @@ function StepProfile({ profile, setP }) {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Danger Zone: Delete Profile ── */}
+      <div className="ra-section-card ra-section-card--full" style={{ border: '1px solid #fecaca', background: '#fff5f5' }}>
+        <div className="ra-section-header">
+          <span className="ra-section-icon" style={{ background: '#ef4444' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </span>
+          <h2 className="ra-section-title" style={{ color: '#991b1b' }}>Danger Zone</h2>
+          <p className="ra-section-desc" style={{ color: '#b91c1c' }}>Permanently remove this company profile or reset data</p>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 6 }}>
+          <div>
+            <strong style={{ fontSize: 12, color: '#7f1d1d' }}>
+              {activeProfileId ? `Delete "${profile.company_name || 'Current Profile'}"` : 'Clear Profile Form Draft'}
+            </strong>
+            <p style={{ fontSize: 11, color: '#991b1b', margin: '2px 0 0' }}>
+              {activeProfileId
+                ? 'This will permanently remove this company profile, locations, vendors, and IT controls from local storage.'
+                : 'Resets all fields in the current company profile draft to empty.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (activeProfileId) {
+                handleDelete(activeProfileId);
+              } else {
+                if (window.confirm("Are you sure you want to reset all fields in this profile draft?")) {
+                  setP('company_name', ''); setP('industry', ''); setP('hq_country', ''); setP('hq_city', ''); setP('num_employees', ''); setP('annual_revenue', ''); setP('hq_address_line1', ''); setP('hq_address_line2', ''); setP('hq_area', ''); setP('hq_state', ''); setP('hq_pincode', ''); setP('hq_lat', ''); setP('hq_lng', '');
+                }
+              }
+            }}
+            style={{
+              background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: 8,
+              fontSize: 11, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 2px 8px rgba(220,38,38,0.25)', transition: 'background 0.2s'
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            {activeProfileId ? 'Delete Saved Profile' : 'Reset Form Draft'}
+          </button>
         </div>
       </div>
 
@@ -1367,7 +1526,20 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
 // 
 // STEP 4 — IT Dependencies
 // 
-function StepIT({ profile, setP }) {
+function StepIT({ profile, setP, activeThreats = [] }) {
+  const itSystems = [
+    ...(profile.key_systems || []),
+    ...(profile.cloud_providers || [])
+  ].filter(Boolean);
+
+  const threatenedIT = itSystems.filter(sys => {
+    const words = sys.toLowerCase().split(' ').filter(w => w.length > 2);
+    return activeThreats.some(a => {
+      const text = `${a.title || ''} ${a.ai?.hazard || ''} ${a.ai?.reasoning || ''} ${a.body || ''}`.toLowerCase();
+      return words.some(w => text.includes(w));
+    });
+  });
+
   return (
     <div className="ra-form-grid">
       <div className="ra-section-card ra-section-card--full">
@@ -1376,6 +1548,21 @@ function StepIT({ profile, setP }) {
           <h2 className="ra-section-title">Internal IT Dependencies</h2>
           <p className="ra-section-desc">Document critical applications, security controls, and cloud infrastructure</p>
         </div>
+
+        {threatenedIT.length > 0 && (
+          <div style={{ marginBottom: 16, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <div>
+              <strong style={{ fontSize: 11, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Active IT Threat Warning ({threatenedIT.length})
+              </strong>
+              <p style={{ fontSize: 11, color: '#b91c1c', margin: '2px 0 0' }}>
+                Live intel feed detected active alerts targeting your registered IT systems / Cloud Providers: <strong>{threatenedIT.join(', ')}</strong>.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="ra-fields-grid">
           <div className="ra-field">
             <label className="ra-label">Number of Critical Applications</label>
@@ -1581,6 +1768,15 @@ function StepSummary({ profile, locations, vendors, riskScore, activeThreats }) 
                   ))}
                   {vendorThreats.filter(v => v.threats.some(t => t === a)).map((v, j) => (
                     <span key={j} className="ra-affected-vend"> {v.vendor_name}</span>
+                  ))}
+                  {itDependencies.filter(sys => {
+                    const words = sys.toLowerCase().split(' ').filter(w => w.length > 2);
+                    const text = `${a.title || ''} ${a.ai?.hazard || ''} ${a.ai?.reasoning || ''} ${a.body || ''}`.toLowerCase();
+                    return words.some(w => text.includes(w));
+                  }).map((sys, j) => (
+                    <span key={`it-${j}`} className="ra-affected-vend" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                      💻 IT System: {sys}
+                    </span>
                   ))}
                 </div>
               </div>

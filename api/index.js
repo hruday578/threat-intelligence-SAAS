@@ -126,22 +126,27 @@ app.post('/api/broadcast', async (req, res) => {
   const citizenSteps    = getSteps(rawCitizenAction);
 
   const urgencyColor   = urgency === 'HIGH' ? '#dc2626' : urgency === 'MED' ? '#d97706' : '#2563eb';
-  const urgencyLabel   = urgency === 'HIGH' ? '🔴 HIGH URGENCY' : urgency === 'MED' ? '🟡 MEDIUM URGENCY' : '🔵 LOW URGENCY';
+  const urgencyLabel   = urgency === 'HIGH' ? 'HIGH URGENCY' : urgency === 'MED' ? 'MEDIUM URGENCY' : 'LOW URGENCY';
+  const urgencyIcon    = urgency === 'HIGH'
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+    : urgency === 'MED'
+    ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>'
+    : '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
   const headerGradient = urgency === 'HIGH'
     ? 'linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#f87171 100%)'
     : urgency === 'MED'
     ? 'linear-gradient(135deg,#78350f 0%,#d97706 60%,#fbbf24 100%)'
     : 'linear-gradient(135deg,#1e3a5f 0%,#2563eb 60%,#60a5fa 100%)';
 
-  const mitigationHtml = stepsHtml(mitigationSteps, '#dc2626', '#fef2f2', '#fecaca', '🛡️', 'Mitigation Strategy');
-  const citizenHtml    = stepsHtml(citizenSteps,    '#0f172a', '#f1f5f9', '#e2e8f0', '👥', 'Civilian Action Protocol');
+  const mitigationHtml = stepsHtml(mitigationSteps, '#dc2626', '#fef2f2', '#fecaca', '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>', 'Mitigation Strategy');
+  const citizenHtml    = stepsHtml(citizenSteps,    '#0f172a', '#f1f5f9', '#e2e8f0', '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>', 'Civilian Action Protocol');
 
   const reasoningHtml = rawReasoning && !['unknown','n/a','none'].includes(rawReasoning.toLowerCase().trim()) ? `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid #fde68a;">
         <tr><td style="background:#d97706;padding:0 0 0 4px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td style="background:#fffbeb;padding:11px 16px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;">
-              💡&nbsp;&nbsp;AI Intelligence Assessment
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>&nbsp;&nbsp;AI Intelligence Assessment
             </td></tr>
             <tr><td style="background:#ffffff;padding:14px 18px;border-top:1px solid #fde68a;font-size:12.5px;line-height:1.65;color:#44403c;font-style:italic;">
               &ldquo;${rawReasoning}&rdquo;
@@ -163,7 +168,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Pre-position protective equipment (flood barriers, sandbags, window shutters, surge protectors) ahead of impact.',
     ],
     'linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#ef4444 100%)',
-    '🛡️', '#dc2626', '#fef2f2', '#fecaca'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>', '#dc2626', '#fef2f2', '#fecaca'
   );
 
   const obj2Html = objectiveHtml(
@@ -179,7 +184,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Establish high-frequency check-in schedules for IT infrastructure and critical operations teams.',
     ],
     'linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 60%,#3b82f6 100%)',
-    '🔄', '#1d4ed8', '#eff6ff', '#bfdbfe'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>', '#1d4ed8', '#eff6ff', '#bfdbfe'
   );
 
   const obj3Html = objectiveHtml(
@@ -195,7 +200,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Establish clear pre-incident check-in protocols for field employees before communications networks become overloaded.',
     ],
     'linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)',
-    '✈️', '#0f3460', '#f8fafc', '#cbd5e1'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>', '#0f3460', '#f8fafc', '#cbd5e1'
   );
 
   const reportedDate = new Date(threat.date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -214,7 +219,7 @@ app.post('/api/broadcast', async (req, res) => {
       <tr><td style="background:#09090b;padding:14px 24px;border-radius:14px 14px 0 0;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="color:#ffffff;font-size:16px;font-weight:900;letter-spacing:0.04em;">
-            ⚡ Alert<span style="color:#ef4444;">Em</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Alert<span style="color:#ef4444;">Em</span>
           </td>
           <td align="right" style="color:#71717a;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">
             Threat Intelligence Platform
@@ -228,8 +233,8 @@ app.post('/api/broadcast', async (req, res) => {
           ${classification}&nbsp;BRIEFING
         </div>
         <div style="font-size:26px;font-weight:900;color:#ffffff;line-height:1.25;margin-bottom:8px;">${hazard} Alert</div>
-        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:16px;">📍 ${region}</div>
-        <div style="display:inline-block;background:rgba(0,0,0,0.25);border-radius:8px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:0.07em;color:#fff;">${urgencyLabel}</div>
+        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> ${region}</div>
+        <div style="display:inline-block;background:rgba(0,0,0,0.25);border-radius:8px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:0.07em;color:#fff;">${urgencyIcon}${urgencyLabel}</div>
       </td></tr>
 
       <!-- Meta strip -->
@@ -258,7 +263,7 @@ app.post('/api/broadcast', async (req, res) => {
           <tr><td style="background:#f8fafc;padding:0 0 0 4px;">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr><td style="background:#f1f5f9;padding:9px 14px;font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#475569;">
-                📰&nbsp;&nbsp;Source Intelligence
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>&nbsp;&nbsp;Source Intelligence
               </td></tr>
               <tr><td style="background:#ffffff;padding:14px 16px;border-top:1px solid #e5e7eb;font-size:13px;font-weight:700;line-height:1.4;">
                 ${articleUrl
@@ -276,7 +281,7 @@ app.post('/api/broadcast', async (req, res) => {
           <tr><td align="center">
             <a href="${articleUrl}" target="_blank"
               style="display:inline-block;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#ffffff;font-size:11px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;padding:13px 32px;border-radius:10px;">
-              📰&nbsp; Read Full Source Article &nbsp;→
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>&nbsp; Read Full Source Article &nbsp;→
             </a>
           </td></tr>
         </table>` : ''}
@@ -290,7 +295,7 @@ app.post('/api/broadcast', async (req, res) => {
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
           <tr><td style="padding:6px 0 12px;border-top:2px solid #f3f4f6;">
             <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#6b7280;padding-top:10px;">
-              📋&nbsp;&nbsp;Recommended Operational Protocols
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>&nbsp;&nbsp;Recommended Operational Protocols
             </div>
           </td></tr>
         </table>

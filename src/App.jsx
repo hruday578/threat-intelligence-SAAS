@@ -214,33 +214,105 @@ const BATCH_CLASSIFY_PROMPT = (topic, location, expandedZones = []) => {
     : `"${location}"`;
   const currentDate = new Date().toISOString().split('T')[0];
 
-  return `[ROLE: EOC PRINCIPAL THREAT INTELLIGENCE ANALYST]
-PRIMARY OPERATIONAL DIRECTIVE: MINIMIZE FALSE NEGATIVES. A missed meteorological warning, government alert, or upcoming hazard forecast is a CRITICAL SYSTEM FAILURE. When uncertain between ALERT and INFORMATIVE, ALWAYS DEFAULT TO ALERT.
+  return `[ROLE: EOC PRINCIPAL THREAT INTELLIGENCE ANALYST — EVENT-FIRST CLASSIFICATION]
 
 CURRENT DATE: ${currentDate}
 TARGET ZONE: ${zoneList} | MONITORING TOPICS: "${topic}"
 
-=== EOC ANALYST 10-STEP INTERNAL REASONING ENGINE ===
-Before generating JSON, evaluate each article through this 10-step operational decision hierarchy:
-1. OPERATIONAL THREAT: Is there an active hazard, developing event, or expected physical/cyber threat?
-2. OFFICIAL AUTHORITY: Is the report issued by or citing official bodies (e.g., IMD, NDMA, NDRF, USGS, NOAA, NWS, SDMA, Met Dept, Hydrology, Forest Dept, Police, Fire, Military, Coast Guard, WHO, Ministries, Port/Airport Authorities)?
-3. FORECAST & PREDICTIVE SIGNALS: Does the text contain advisory/predictive terms (warning, watch, advisory, forecast, predicted, expected, likely, anticipated, risk, danger, monitoring, tracking, forming, developing, intensifying, red/orange/yellow alert, heavy rainfall, flash flood, cyclone, heatwave, landslide risk, river overflow, reservoir release, evacuation, preparedness, stay indoors, travel advisories, closures)?
-4. PREDICTIVE TIMELINE: Is an event expected within hours or days, even if zero damage has occurred yet?
-5. PREPAREDNESS & STAGING: Are authorities or communities mobilizing, issuing advisories, or pre-positioning assets?
-6. TARGET ZONE RELEVANCE: Does the event or forecast directly affect, border, or approach ${zoneList}?
-7. INFRASTRUCTURE RISK: Could transit, power, telecom, water, logistics, or public facilities be impacted?
-8. POPULATION RISK: Does the scenario present potential risk to life, personnel mobility, or employee safety?
-9. SEVERITY & URGENCY EVALUATION: Calculate risk severity and determine urgency (HIGH, MED, LOW).
-10. FINAL CLASSIFICATION:
-    - ALERT: Active disaster OR official warning/watch/advisory/forecast OR predictive hazard language OR official preparedness notice for the target zone.
-    - INFORMATIVE: Historical analysis, policy updates, or post-disaster retrospective with ZERO active or forecasted risk.
-    - IRRELEVANT: Geographically unrelated to ${zoneList} with no direct threat implication.
+=== PRIMARY DIRECTIVE: EVENT-FIRST TRIAGE ===
+Before classifying any article, you MUST first determine whether the article reports a CONCRETE OPERATIONAL EVENT or ACTIONABLE CURRENT/IMMINENT THREAT.
 
-=== CLASSIFICATION OPERATIONAL MANDATES ===
-- OFFICIAL FORECASTS = ALERT ALWAYS: Any watch, warning, advisory, or forecast issued by a meteorological or emergency authority for today or upcoming days is ALWAYS ALERT, never INFORMATIVE.
-- PREPAREDNESS & TRACKING = ALERT ALWAYS: Reports of authorities tracking storms, managing reservoir releases, or issuing precautionary notices = ALERT.
-- OLD / PAST THREATS = INFORMATIVE: Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event (e.g. an earthquake that already happened, a storm that already passed, a flood that already receded), classify it as INFORMATIVE. If the threat is ongoing, recurring, or the article is a warning/advisory, still classify as ALERT.
-- PRE-INCIDENT MITIGATION FOCUS: "mitigation" and "citizen_action" MUST focus strictly on PRE-INCIDENT PREPAREDNESS & PREVENTATIVE ACTIONS (actions to take BEFORE impact to reduce harm). Never output "N/A", "Unknown", or vague text.
+Do NOT classify an article as ALERT merely because it discusses war, terrorism, military operations, geopolitical conflict, escalation, possible attacks, potential threats, risks, danger, military capability, strategic analysis, think-tank analysis, expert opinion, policy analysis, academic research, historical events, hypothetical scenarios, or what a country "could", "might", or "may" do.
+
+Discussion of a threat IS NOT the same as an actual or imminent threat.
+
+=== EVENT-FIRST DECISION FLOW ===
+For each article, follow this exact sequence:
+
+STEP 1 — ARTICLE TYPE IDENTIFICATION:
+Determine the article type: INCIDENT_REPORT, OFFICIAL_WARNING, FORECAST, ANALYSIS, OPINION, RESEARCH, HISTORICAL, SCENARIO, POLICY, or OTHER.
+
+STEP 2 — OPERATIONAL EVENT CHECK:
+Does the article contain evidence of a concrete operational event? Set operational_event = true ONLY if the article reports:
+- A confirmed current or recent incident (missile strike, bombing, terrorist attack, cyberattack, earthquake, flood, wildfire, cyclone, industrial accident, infrastructure failure, military attack, confirmed border incident)
+- An official actionable warning, advisory, watch, or forecast issued by a recognized authority (IMD, NDMA, NDRF, USGS, NOAA, NWS, SDMA, Met Dept, Police, Fire, Military, Coast Guard, WHO, Ministries, Port/Airport Authorities) for today or upcoming days
+- A confirmed imminent threat that is specific, credible, current, and supported by evidence in the article (e.g. "Government announces military strikes will begin tomorrow")
+- A developing operational situation with concrete evidence (troops actively deploying, evacuation underway, airport/port closure announced, emergency services mobilizing, military operation has begun, authorities responding to an active incident)
+
+If NONE of the above apply, set operational_event = false.
+
+STEP 3 — THREAT STATUS:
+Determine threat_status:
+- CONFIRMED: An actual incident has occurred and is reported.
+- DEVELOPING: An operational situation is actively unfolding with concrete evidence.
+- IMMINENT: A specific, credible threat is confirmed for the very near future (hours/days) with official or authoritative evidence.
+- UPCOMING: An official forecast or advisory for a future event (e.g., weather warning for tomorrow).
+- HYPOTHETICAL: The article discusses possible/potential/predicted scenarios without concrete operational evidence.
+- HISTORICAL: The article describes a past completed event.
+- NONE: No threat element. Pure policy, general analysis, or unrelated.
+
+STEP 4 — TARGET ZONE RELEVANCE:
+Does the actual operational event/threat (NOT merely the discussion topic) directly:
+- Occur in ${zoneList}?
+- Affect ${zoneList}?
+- Approach ${zoneList}?
+- Threaten critical infrastructure or personnel in ${zoneList}?
+
+STEP 5 — FINAL CLASSIFICATION:
+Apply these rules strictly:
+
+ALERT: Use ONLY when ALL of the following are true:
+  1. operational_event = true
+  2. threat_status is CONFIRMED, DEVELOPING, IMMINENT, or UPCOMING
+  3. The event/threat is relevant to ${zoneList}
+
+INFORMATIVE: Use for:
+  - Analysis, opinion, research, think-tank reports, strategic assessments
+  - Policy discussions, historical analysis, retrospective reporting
+  - Humanitarian aid, charity work, relief foundations, post-disaster recovery, or supply deliveries (even if they mention a disaster in the context of the relief effort).
+  - Hypothetical threats, predictions without concrete operational evidence
+  - General geopolitical discussion
+  - Articles where operational_event = false
+  - Official sources publishing historical reports, policy papers, or general assessments (official source does NOT automatically mean ALERT)
+  - Articles with threat_status = HYPOTHETICAL, HISTORICAL, or NONE
+  - Operational events that do NOT affect ${zoneList}
+
+IRRELEVANT: Use when the article has no meaningful relationship to ${zoneList} or the monitoring topics.
+
+=== CRITICAL EXAMPLES ===
+"Analysts warn that Iran could escalate the conflict." → INFORMATIVE (analysis/prediction, no operational event)
+"Iran launches ballistic missiles at Israel." → ALERT (confirmed military event)
+"Pakistan can strike Afghanistan." → INFORMATIVE (capability discussion, no operational evidence)
+"Pakistan announces it will launch strikes against Afghanistan tomorrow." → ALERT (imminent operational development)
+"True Impact Foundation delivers flood relief to Assam." → INFORMATIVE (humanitarian relief effort, not an active new hazard)
+"Think tank argues alliance dynamics contributed to the war." → INFORMATIVE (analysis)
+"IMD issues a red alert for heavy rainfall in Bangalore tomorrow." → ALERT (official forecast)
+"Historical analysis of the 2024 floods in Karnataka" → INFORMATIVE (historical)
+
+=== UNCERTAINTY RULE ===
+When uncertain, first determine whether a concrete operational event, actionable official warning, or credible imminent threat is actually supported by the article's evidence. If the evidence is insufficient to establish a current/imminent operational threat, classify as INFORMATIVE rather than ALERT.
+
+=== OLD / PAST THREATS ===
+Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event, classify it as INFORMATIVE with threat_status = HISTORICAL. If the threat is ongoing, recurring, or the article is a current warning/advisory, classify based on the event-first rules above.
+
+=== URGENCY RULES ===
+HIGH: Immediate or rapidly developing operational threat requiring prompt action.
+MED: Credible developing/upcoming operational threat requiring preparation.
+LOW: Real operational threat exists but does not require immediate action.
+NONE: No current/imminent operational threat.
+
+INFORMATIVE articles MUST have urgency = NONE.
+IRRELEVANT articles MUST have urgency = NONE.
+Do NOT automatically convert high-risk analysis into HIGH urgency.
+
+=== MITIGATION & CITIZEN ACTION RULES ===
+For ALERT: Provide specific pre-incident operational protocols relevant to the actual identified threat.
+For INFORMATIVE: Output exactly "No immediate operational action indicated."
+For IRRELEVANT: Output exactly "No immediate operational action indicated."
+
+=== REASONING RULES ===
+For ALERT: Cite what happened or is expected, location, timeline, credible source/authority, and why it represents an operational threat.
+For INFORMATIVE: Explicitly state that the article is analysis/opinion/research/etc. and does not establish a current or imminent operational event. Do NOT fabricate an official authority or operational event.
 
 === OUTPUT SCHEMA ===
 Return ONLY a valid JSON array matching the exact input order, including the input "id" for each object. Do not include markdown code fences or conversational text outside the JSON array.
@@ -249,14 +321,17 @@ Return ONLY a valid JSON array matching the exact input order, including the inp
   {
     "id": 0,
     "classification": "ALERT|INFORMATIVE|IRRELEVANT",
-    "hazard": "Specific Hazard Type (e.g. Heavy Rain Warning, Cyclone Watch, Flash Flood Risk)",
-    "region": "Specific City, State, Country",
+    "hazard": "Specific operational hazard or informational topic",
+    "region": "Specific City, State/Province, Country",
     "exact_location": "Extract the specific city, town, district, province, or landmark mentioned anywhere in the world (e.g. Shinjuku Tokyo, Frankfurt, Manhattan New York, Houston, Sydney, Pathanamthitta, Dadar Mumbai, Munich, Osaka). Do not output generic country names if a specific city/town is mentioned.",
-    "reasoning": "1-2 sentence EOC operational rationale citing official authority, timeline, and threat level",
-    "mitigation": "Actionable pre-incident operational protocols for emergency response teams & organizations",
-    "citizen_action": "Actionable pre-hazard safety measures for citizens and employees",
+    "article_type": "INCIDENT_REPORT|OFFICIAL_WARNING|FORECAST|ANALYSIS|OPINION|RESEARCH|HISTORICAL|SCENARIO|POLICY|OTHER",
+    "operational_event": true,
+    "threat_status": "CONFIRMED|DEVELOPING|IMMINENT|UPCOMING|HYPOTHETICAL|HISTORICAL|NONE",
+    "reasoning": "1-2 sentence evidence-based rationale citing what the article actually reports",
+    "mitigation": "Pre-incident operational action or 'No immediate operational action indicated.'",
+    "citizen_action": "Pre-hazard citizen action or 'No immediate citizen action indicated.'",
     "confidence": 0-100,
-    "urgency": "HIGH|MED|LOW"
+    "urgency": "HIGH|MED|LOW|NONE"
   }
 ]`;
 };
@@ -947,7 +1022,8 @@ function AppMain() {
 
     try {
       const dateStart = new Date(Date.now() - (DURATIONS.find(d => d.value === params.dur)?.days || 1) * 86400000).toISOString().split('T')[0];
-      const dateEnd = new Date().toISOString().split('T')[0];
+      // Set dateEnd to tomorrow's UTC date to guarantee today's articles are never excluded due to timezone offset
+      const dateEnd = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
       // 1. Bounded Date Filter
       const queryParts = [{ "dateStart": dateStart, "dateEnd": dateEnd }];
@@ -1038,6 +1114,7 @@ function AppMain() {
               action: "getArticles",
               articlesCount: count,
               articlesSortBy: sortBy,
+              articlesSortByAsc: false, // Ensures newest (latest/today's) articles come first
               resultType: "articles",
               dataType: ["news"],
               articleBodyLen: 1000,
@@ -1312,7 +1389,7 @@ function AppMain() {
           chunk.forEach((art, idx) => {
             const aiJson = (Array.isArray(aiJsonArray) ? aiJsonArray.find(item => item && (item.id === idx || Number(item.id) === idx)) : null)
               || (aiJsonArray && aiJsonArray[idx])
-              || { classification: 'INFORMATIVE', reasoning: 'Missing from batch', mitigation: 'Monitor status', citizen_action: 'Stay alert', urgency: 'LOW', hazard: 'General', region: locationContext };
+              || { classification: 'INFORMATIVE', reasoning: 'Missing from batch — no operational event established.', mitigation: 'No immediate operational action indicated.', citizen_action: 'No immediate citizen action indicated.', urgency: 'NONE', hazard: 'General', region: locationContext, article_type: 'OTHER', operational_event: false, threat_status: 'NONE' };
 
             // REGION GUARD: Verify geographical relevance without falsely marking specific city/town articles as IRRELEVANT
             if (aiJson.classification !== 'IRRELEVANT' && locationContext !== 'Global') {
@@ -1344,7 +1421,7 @@ function AppMain() {
           chunk.forEach((art) => {
             masterProcessedRef.current.push({
               ...art,
-              ai: { classification: 'INFORMATIVE', reasoning: 'AI batch processing fallback', mitigation: 'Monitor status', citizen_action: 'Stay alert', urgency: 'LOW', hazard: 'General', region: locationContext }
+              ai: { classification: 'INFORMATIVE', reasoning: 'AI batch processing fallback — no operational event established.', mitigation: 'No immediate operational action indicated.', citizen_action: 'No immediate citizen action indicated.', urgency: 'NONE', hazard: 'General', region: locationContext, article_type: 'OTHER', operational_event: false, threat_status: 'NONE' }
             });
           });
         }
@@ -1364,6 +1441,7 @@ function AppMain() {
             id: groupKey,
             title: art.title,
             date: art.date,
+            dateTime: art.dateTime || art.date,
             source: art.source,
             sources: [],
             isTargetZone: false,
@@ -1371,13 +1449,24 @@ function AppMain() {
               classification: cls,
               hazard: art.ai.hazard || 'General',
               region: art.ai.region || 'Global',
-              urgency: art.ai.urgency || 'LOW',
+              urgency: art.ai.urgency || 'NONE',
               confidence: art.ai.confidence || 0,
               reasoning: art.ai.reasoning,
               mitigation: art.ai.mitigation,
-              citizen_action: art.ai.citizen_action
+              citizen_action: art.ai.citizen_action,
+              article_type: art.ai.article_type || 'OTHER',
+              operational_event: art.ai.operational_event || false,
+              threat_status: art.ai.threat_status || 'NONE'
             }
           };
+        } else {
+          // If a newer article is added to this group, update group date to the latest timestamp
+          const artTime = new Date(art.dateTime || art.date || 0).getTime();
+          const groupTime = new Date(groupedEvents[groupKey].dateTime || groupedEvents[groupKey].date || 0).getTime();
+          if (artTime > groupTime) {
+            groupedEvents[groupKey].date = art.date;
+            groupedEvents[groupKey].dateTime = art.dateTime || art.date;
+          }
         }
 
         if (activeZones.length > 0 && activeZones.some(z => (art.title + ' ' + (art.body || '')).toLowerCase().includes(z.toLowerCase()))) {
@@ -1386,7 +1475,8 @@ function AppMain() {
 
         const isValidText = (t) => t && typeof t === 'string' && t.trim().length > 3 && !['unknown', 'n/a', 'none', 'na'].includes(t.trim().toLowerCase());
 
-        if (art.ai.urgency === 'HIGH') groupedEvents[groupKey].ai.urgency = 'HIGH';
+        // Only escalate urgency to HIGH if the source article is actually an ALERT
+        if (art.ai.urgency === 'HIGH' && art.ai.classification === 'ALERT') groupedEvents[groupKey].ai.urgency = 'HIGH';
 
         const artConfidence = art.ai.confidence || 0;
         const groupConfidence = groupedEvents[groupKey].ai.confidence || 0;
@@ -1417,7 +1507,7 @@ function AppMain() {
             const scoreB = b.sources.reduce((sum, s) => sum + (s.shares?.facebook || 0), 0);
             return scoreB - scoreA;
           }
-          return new Date(b.date) - new Date(a.date); // default: date
+          return new Date(b.dateTime || b.date || 0) - new Date(a.dateTime || a.date || 0); // default: date (newest first)
         });
       setArticles(finalEvents);
 
