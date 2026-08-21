@@ -11,31 +11,20 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-let transporter;
+function getTransporter() {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const user = process.env.SMTP_USER || 'tactical.ops.demo@gmail.com';
+  const pass = process.env.SMTP_PASS || 'nejwkaaomtkbvhlc';
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465;
+  const secure = process.env.SMTP_SECURE !== undefined ? (process.env.SMTP_SECURE === 'true') : true;
 
-async function setupTransporter() {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-    console.log('✅ Custom SMTP Transporter setup complete.');
-  } else {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: { user: testAccount.user, pass: testAccount.pass },
-    });
-    console.log('✅ Ethereal Email Test Transporter setup complete.');
-    console.log(`Test account: ${testAccount.user}`);
-  }
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
 }
-
-setupTransporter().catch(console.error);
 
 app.post('/api/broadcast', async (req, res) => {
   const { employees, threat } = req.body;
@@ -332,8 +321,10 @@ app.post('/api/broadcast', async (req, res) => {
 </html>`;
 
   try {
-    const info = await transporter.sendMail({
-      from: '"Tactical Ops Center" <no-reply@tactical-ops.com>',
+    const mailer = getTransporter();
+    const senderEmail = process.env.SMTP_USER || 'tactical.ops.demo@gmail.com';
+    const info = await mailer.sendMail({
+      from: `"Tactical Ops Center" <${senderEmail}>`,
       to: emailAddresses,
       subject: `[${classification}] Safety Broadcast: ${hazard} in ${region}`,
       text: `Alert: ${title}\nHazard: ${hazard}\nRegion: ${region}\n\nReasoning: ${rawReasoning}\n\nMitigation: ${rawMitigation}\n\nCivilian Actions: ${rawCitizenAction}${articleUrl ? `\n\nRead Article: ${articleUrl}` : ''}`,
