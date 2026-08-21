@@ -763,7 +763,7 @@ class ErrorBoundary extends React.Component {
 function AppMain() {
   const { user, session, organization, member, loading: authLoading, signOut } = useAuth();
   const [configExpanded, setConfigExpanded] = useState(true);
-  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '');
+  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '8745555f-c1dc-4dd7-a57d-9e664d846c3e');
   const [aiKey, setAiKey] = useState('');
   const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState(['wildfire']);
