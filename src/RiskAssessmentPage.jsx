@@ -30,7 +30,7 @@ const CITY_COORDS = {
   'Singapore': [1.3521, 103.8198], 'Malaysia': [3.1390, 101.6869],
   'Kuala Lumpur': [3.1390, 101.6869], 'Thailand': [13.7563, 100.5018],
   'Bangkok': [13.7563, 100.5018], 'Indonesia': [-6.2088, 106.8456],
-  'Jakarta': [-6.2088, 106.8456], 'Vietnam': [21.0285, 105.8542],
+  'Jakarta': [-6.2088, 106.8456], 'Vietnam': [21.0285, 105.8542], 'Northern Vietnam': [21.0285, 105.8542], 'Southern Vietnam': [10.8231, 106.6297],
   'Philippines': [14.5995, 120.9842], 'Manila': [14.5995, 120.9842],
   'Pakistan': [33.6844, 73.0479], 'Karachi': [24.8607, 67.0011],
   'Bangladesh': [23.8103, 90.4125], 'Sri Lanka': [6.9271, 79.8612],
@@ -239,8 +239,9 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
           attributionControl={false}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            maxZoom={18}
+            // Esri World Dark Gray Canvas — free, no API key required
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+            maxZoom={16}
           />
 
           {hasData && <FitBounds points={allPoints} />}

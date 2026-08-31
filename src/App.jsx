@@ -961,7 +961,7 @@ function AppMain() {
   }, [autoPilot, autoPilotInterval, user, newsKey, aiKey, keywords, params, zonesInput, provider]);
 
   const handleExecute = async (isAuto = false) => {
-    if (!newsKey || !aiKey) return setError('Configuration Incomplete');
+    if (!newsKey) return setError('Configuration Incomplete');
     if (!keywords.length && !params.concepts.length && !params.locs.length && !params.cats.length) return setError('Add at least one keyword, concept, or location');
     
     const activeProviderObj = PROVIDERS.find(p => p.id === provider);
@@ -1271,12 +1271,18 @@ function AppMain() {
           const timeoutId = setTimeout(() => controller.abort(), 25000);
           let aiRes;
 
+          let apiProviderName = 'groq';
+          if (provider === 'openrouter') apiProviderName = 'openrouter';
+          else if (provider === 'deepseek') apiProviderName = 'deepseek';
+
           try {
-            aiRes = await fetch(activeProvider.endpoint, {
+            aiRes = await fetch('/api/ai-proxy', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiKey}` },
+              headers: { 'Content-Type': 'application/json' },
               signal: controller.signal,
               body: JSON.stringify({
+                provider: apiProviderName,
+                apiKey: aiKey || '',
                 model: activeProvider.model,
                 temperature: 0.1,
                 messages: [

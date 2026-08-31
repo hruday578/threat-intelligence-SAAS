@@ -365,6 +365,8 @@ const CITY_COORDINATES = {
   "Thailand": { lat: 13.7563, lon: 100.5018 }, // Bangkok
   "Bangkok": { lat: 13.7563, lon: 100.5018 },
   "Vietnam": { lat: 21.0285, lon: 105.8542 }, // Hanoi
+  "Northern Vietnam": { lat: 21.0285, lon: 105.8542 },
+  "Southern Vietnam": { lat: 10.8231, lon: 106.6297 },
   "Hanoi": { lat: 21.0285, lon: 105.8542 },
   "Ho Chi Minh City": { lat: 10.8231, lon: 106.6297 },
   "Myanmar": { lat: 16.8661, lon: 96.1951 },
@@ -525,12 +527,14 @@ const CITY_COORDINATES = {
 // --- MAP TILE STYLES CONFIG ---
 const TILE_THEMES = {
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+    // Esri World Dark Gray Canvas — free, no API key required
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
   },
   light: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+    // OpenStreetMap standard tiles — free, no API key required
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -917,16 +921,30 @@ export default function MapsPage({
                 if (res.ok) {
                   const data = await res.json();
                   if (data && data.length > 0) {
-                    const landResult = data.find(d =>
+                    // Smart country filter: ensure results match targetLoc country (prevent cross-country false matches, e.g. Vietnam, Uganda)
+                    let filteredData = data;
+                    const expectedCountry = extractCountry(targetLoc);
+                    if (expectedCountry) {
+                      const expectedCountryObj = COUNTRIES.find(c => c.name === expectedCountry);
+                      const expectedCode = expectedCountryObj?.code?.toLowerCase();
+                      if (expectedCode) {
+                        const matchingCountryData = data.filter(d => d.address?.country_code?.toLowerCase() === expectedCode);
+                        if (matchingCountryData.length > 0) {
+                          filteredData = matchingCountryData;
+                        }
+                      }
+                    }
+
+                    const landResult = filteredData.find(d =>
                       LAND_TYPES.some(t => (d.type || '').toLowerCase().includes(t) ||
                         (d.addresstype || '').toLowerCase().includes(t))
                     );
-                    const chosen = landResult || data[0];
+                    const chosen = landResult || filteredData[0];
                     coords = { lat: parseFloat(chosen.lat), lon: parseFloat(chosen.lon) };
                     cache[targetLoc] = coords;
                     geocodeCacheRef.current[targetLoc] = coords;
                     localStorage.setItem('alertem_geo_cache', JSON.stringify(cache));
-                    console.log(`[Maps] Geocoded "${targetLoc}" via query "${query}" →`, coords);
+                    console.log(`[Maps] Geocoded "${targetLoc}" via query "${query}" (expected country: ${expectedCountry}) →`, coords);
                   }
                 }
                 // Rate-limit: wait between Nominatim calls
