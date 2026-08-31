@@ -239,9 +239,15 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
           attributionControl={false}
         >
           <TileLayer
-            // Esri World Dark Gray Canvas — free, no API key required
+            // Esri World Dark Gray Canvas (base) — free, no API key required
             url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
             maxZoom={16}
+          />
+          <TileLayer
+            // Esri Dark Gray Reference (labels overlay) — city/country names, roads, etc.
+            url="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+            maxZoom={16}
+            opacity={1}
           />
 
           {hasData && <FitBounds points={allPoints} />}

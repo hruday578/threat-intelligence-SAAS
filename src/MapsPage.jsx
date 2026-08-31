@@ -527,8 +527,9 @@ const CITY_COORDINATES = {
 // --- MAP TILE STYLES CONFIG ---
 const TILE_THEMES = {
   dark: {
-    // Esri World Dark Gray Canvas — free, no API key required
+    // Esri World Dark Gray Canvas (base) + Reference (labels) — both free, no API key
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    labelsUrl: "https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
     attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
   },
   light: {
@@ -1840,6 +1841,14 @@ export default function MapsPage({
               url={TILE_THEMES[mapStyle].url}
               key={mapStyle}
             />
+            {/* Labels overlay layer (e.g. Esri Dark Gray Reference for dark mode) */}
+            {TILE_THEMES[mapStyle].labelsUrl && (
+              <TileLayer
+                url={TILE_THEMES[mapStyle].labelsUrl}
+                key={mapStyle + '-labels'}
+                opacity={1}
+              />
+            )}
             
             {/* Auto center map to fit markers */}
             <MapAutoCenter markers={[...markers, ...employeeMarkers]} />
