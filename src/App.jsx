@@ -405,11 +405,26 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
     <div className={`relative flex-1 min-w-[140px] ${disabled ? 'opacity-40' : ''}`}>
       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} {selected.length > 0 && <span className="text-red-600">({selected.length})</span>}</label>
       <div onClick={() => !disabled && setOpen(!open)} className="h-10 w-full bg-white border border-gray-100 rounded-xl px-3 flex items-center justify-between cursor-pointer hover:border-red-500/20 transition-all shadow-sm overflow-hidden text-[10px] font-bold">
-        <div className="flex gap-1 overflow-hidden">
+        <div className="flex gap-1 overflow-hidden items-center">
           {!selected.length ? <span className="text-gray-300">{placeholder}</span> :
-            selected.map(s => <span key={s.uri || s.label} className="bg-red-50 text-red-600 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">{s.label}</span>)}
+            selected.map(s => (
+              <span key={s.uri || s.label} className="bg-red-50 text-red-600 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 whitespace-nowrap">
+                {s.label}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange(selected.filter(item => (item.uri || item.label) !== (s.uri || s.label)));
+                  }}
+                  className="text-red-400 hover:text-red-700 text-xs leading-none"
+                >
+                  &times;
+                </button>
+              </span>
+            ))
+          }
         </div>
-        <svg className={`w-3 h-3 text-gray-300 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+        <svg className={`w-3 h-3 shrink-0 text-gray-300 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
       </div>
       {open && (
         <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-60 overflow-y-auto p-1">
@@ -672,42 +687,54 @@ function ConceptInput({ label, concepts = [], onChange }) {
 }
 
 //  Search Query Bar (visual display of active filters) 
-function SearchQueryBar({ keywords, concepts, locs, states, cities, cats }) {
-  const allTokens = [];
+function SearchQueryBar({ keywords, concepts, locs, states, cities }) {
+  const groups = [];
 
-  keywords.forEach(kw => allTokens.push({ type: 'keyword', label: kw }));
-  concepts.forEach(c => allTokens.push({ type: 'concept', label: c.label }));
-  [...cities, ...states, ...locs].forEach(l => allTokens.push({ type: 'location', label: l.label }));
-  cats.forEach(c => allTokens.push({ type: 'category', label: c.label }));
+  if (keywords && keywords.length > 0) {
+    groups.push(keywords.map(kw => ({ type: 'keyword', label: kw })));
+  }
+  if (concepts && concepts.length > 0) {
+    groups.push(concepts.map(c => ({ type: 'concept', label: c.label })));
+  }
+  const allLocs = [...(cities || []), ...(states || []), ...(locs || [])];
+  if (allLocs.length > 0) {
+    groups.push(allLocs.map(l => ({ type: 'location', label: l.label })));
+  }
 
-  if (allTokens.length === 0) return null;
+  if (groups.length === 0) return null;
 
   const colorMap = {
     keyword: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', icon: '' },
     concept: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: '' },
     location: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: '' },
-    category: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: '' },
   };
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-50">
       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Your search query</span>
       <div className="flex flex-wrap items-center gap-1.5">
-        {allTokens.map((tok, i) => {
-          const c = colorMap[tok.type];
-          return (
-            <React.Fragment key={i}>
-              {i > 0 && <span className="text-[8px] font-black text-gray-400 uppercase">AND</span>}
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black ${c.bg} ${c.border} ${c.text} whitespace-nowrap`}>
-                <span className="opacity-60">{c.icon}</span> {tok.label}
-              </span>
-            </React.Fragment>
-          );
-        })}
+        {groups.map((group, groupIdx) => (
+          <React.Fragment key={`group-${groupIdx}`}>
+            {groupIdx > 0 && <span className="text-[8px] font-black text-gray-400 uppercase mx-1">AND</span>}
+            {group.length > 1 && <span className="text-[12px] font-light text-gray-300">(</span>}
+            {group.map((tok, i) => {
+              const c = colorMap[tok.type];
+              return (
+                <React.Fragment key={i}>
+                  {i > 0 && <span className="text-[8px] font-black text-gray-400 uppercase mx-1">OR</span>}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black ${c.bg} ${c.border} ${c.text} whitespace-nowrap`}>
+                    <span className="opacity-60">{c.icon}</span> {tok.label}
+                  </span>
+                </React.Fragment>
+              );
+            })}
+            {group.length > 1 && <span className="text-[12px] font-light text-gray-300">)</span>}
+          </React.Fragment>
+        ))}
       </div>
       <div className="flex items-center gap-3 mt-2 flex-wrap">
-        {concepts.length > 0 && <span className="text-[8px] text-purple-500 font-bold"> Concepts match ALL articles tagged with those Wikipedia topics</span>}
-        {keywords.length > 0 && <span className="text-[8px] text-orange-500 font-bold"> Keywords match article text</span>}
+        {concepts && concepts.length > 0 && <span className="text-[8px] text-purple-500 font-bold"> Concepts match ANY of the selected Wikipedia topics</span>}
+        {keywords && keywords.length > 0 && <span className="text-[8px] text-orange-500 font-bold"> Keywords match article text</span>}
       </div>
     </div>
   );
@@ -766,7 +793,7 @@ function AppMain() {
   const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '8745555f-c1dc-4dd7-a57d-9e664d846c3e');
   const [aiKey, setAiKey] = useState('');
   const [provider, setProvider] = useState('groq-120b');
-  const [keywords, setKeywords] = useState(['wildfire']);
+  const [keywords, setKeywords] = useState([]);
   const [zonesInput, setZonesInput] = useState('');
   const [params, setParams] = useState({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] });
   const [sortBy, setSortBy] = useState('date');
@@ -1030,7 +1057,14 @@ function AppMain() {
 
       // 2. Concepts filter (broad umbrella topics from dropdown)
       if (params.concepts.length > 0) {
-        const conceptUris = [...new Set(params.concepts.flatMap(c => CONCEPT_EXPANSIONS[c.uri] || [c.uri]))];
+        let conceptUris = [...new Set(params.concepts.flatMap(c => CONCEPT_EXPANSIONS[c.uri] || [c.uri]))];
+        
+        // NewsAPI restricts query length (max 10-15 conditions). If we exceed 10 concepts, truncate to prevent 400 Bad Request
+        if (conceptUris.length > 10) {
+          console.warn(`Truncating concept URIs from ${conceptUris.length} to 10 to avoid API limits.`);
+          conceptUris = conceptUris.slice(0, 10);
+        }
+
         const conceptParts = conceptUris.map(uri => ({ "conceptUri": uri }));
         if (conceptParts.length === 1) {
           queryParts.push(conceptParts[0]);
@@ -1538,7 +1572,7 @@ function AppMain() {
       });
     } catch (e) {
       console.error("ANALYSIS_CRASH:", e);
-      setError(e.message);
+      addLog('ERROR', 'Analysis Failed', e.message);
     } finally { setLoading(false); }
   };
 
@@ -1695,7 +1729,7 @@ function AppMain() {
                   <button onClick={() => { const next = !autoPilot; setAutoPilot(next); addLog('CONFIG', `Auto-Pilot ${next ? 'Enabled' : 'Disabled'}`, `Scanning scheduled every ${autoPilotInterval} minutes`); }} className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${autoPilot ? 'bg-red-600 text-white border-red-600 animate-pulse shadow-lg shadow-red-200' : 'text-gray-400 border-gray-200 hover:text-red-600 hover:border-red-600'}`}>
                     {autoPilot ? `Auto-Pilot: ON (${autoPilotInterval}m)` : 'Enable Auto-Pilot'}
                   </button>
-                  <button onClick={() => { setKeywords(['wildfire']); setZonesInput(''); setParams({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] }); addLog('CONFIG', 'Analysis Reset', 'Restored query inputs to baseline default parameters'); }} className="text-[9px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest">Reset Analysis</button>
+                  <button onClick={() => { setKeywords([]); setZonesInput(''); setParams({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] }); addLog('CONFIG', 'Analysis Reset', 'Restored query inputs to baseline default parameters'); }} className="text-[9px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest">Reset Analysis</button>
                 </div>
               </div>
 
@@ -1705,7 +1739,6 @@ function AppMain() {
                     <TagInput label="Target Hazards" tags={keywords} onAdd={t => setKeywords([...new Set([...keywords, t])])} onRemove={t => setKeywords(keywords.filter(k => k !== t))} suggestionsLibrary={TACTICAL_LIBRARY} />
                     <ConceptInput label=" Concepts" concepts={params.concepts} onChange={v => setParams(p => ({ ...p, concepts: v }))} />
                     <MultiSelect label="Source" options={TOP_SOURCES} selected={params.prefSrc} onChange={v => setParams(p => ({ ...p, prefSrc: v }))} placeholder="Any Source" />
-                    <MultiSelect label="Categories" options={CURATED_CATEGORIES} selected={params.cats} onChange={v => setParams(p => ({ ...p, cats: v }))} placeholder="All Sectors" />
                     <MultiSelect label="Country" options={countryList} selected={params.locs} onChange={v => setParams(p => ({ ...p, locs: v }))} placeholder="Global" />
                     <MultiSelect label="State / Region" options={stateList} selected={params.states} onChange={v => setParams(p => ({ ...p, states: v }))} placeholder="All Regions" disabled={!params.locs.length} />
                     <MultiSelect label="City" options={cityList} selected={params.cities} onChange={v => setParams(p => ({ ...p, cities: v }))} placeholder="All Cities" disabled={!params.states.length} />
@@ -1767,7 +1800,6 @@ function AppMain() {
                     locs={params.locs}
                     states={params.states}
                     cities={params.cities}
-                    cats={params.cats}
                   />
 
                   <div className="flex items-center gap-4 pt-2 border-t border-gray-50 overflow-x-auto pb-1">
