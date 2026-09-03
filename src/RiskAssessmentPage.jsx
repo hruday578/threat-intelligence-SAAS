@@ -1087,9 +1087,12 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
 
         {/* ── Registered Office / HQ Address ── */}
         <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9ca3af', marginBottom: 14 }}>
-            📍 Registered Office / HQ Address
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <h3 style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9ca3af', margin: 0 }}>
+              Registered Office / HQ Address
+            </h3>
+          </div>
           <div className="ra-fields-grid">
             <div className="ra-field">
               <label className="ra-label">Flat / Unit / Building No.</label>
@@ -1164,24 +1167,23 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
       </div>
 
       {/* ── Danger Zone: Delete Profile ── */}
-      <div className="ra-section-card ra-section-card--full" style={{ border: '1px solid #fecaca', background: '#fff5f5' }}>
-        <div className="ra-section-header">
-          <span className="ra-section-icon" style={{ background: '#ef4444' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          </span>
-          <h2 className="ra-section-title" style={{ color: '#991b1b' }}>Danger Zone</h2>
-          <p className="ra-section-desc" style={{ color: '#b91c1c' }}>Permanently remove this company profile or reset data</p>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 6 }}>
-          <div>
-            <strong style={{ fontSize: 12, color: '#7f1d1d' }}>
-              {activeProfileId ? `Delete "${profile.company_name || 'Current Profile'}"` : 'Clear Profile Form Draft'}
-            </strong>
-            <p style={{ fontSize: 11, color: '#991b1b', margin: '2px 0 0' }}>
-              {activeProfileId
-                ? 'This will permanently remove this company profile, locations, vendors, and IT controls from local storage.'
-                : 'Resets all fields in the current company profile draft to empty.'}
-            </p>
+      <div className="ra-section-card ra-section-card--full" style={{ border: '1px solid #fecaca', background: '#fff5f5', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flex: 1, minWidth: 280 }}>
+            <span className="ra-section-icon" style={{ background: '#ef4444', flexShrink: 0, marginTop: 2 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            </span>
+            <div>
+              <h2 className="ra-section-title" style={{ color: '#991b1b', marginBottom: 6, fontSize: 14 }}>Danger Zone</h2>
+              <strong style={{ fontSize: 13, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
+                {activeProfileId ? `Delete "${profile.company_name || 'Current Profile'}"` : 'Clear Profile Data'}
+              </strong>
+              <p style={{ fontSize: 12, color: '#991b1b', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
+                {activeProfileId
+                  ? 'This action cannot be undone. It will permanently delete the company profile along with all associated locations, vendors, and IT controls from the system.'
+                  : 'This will reset all unsaved fields in the current draft to their default empty states.'}
+              </p>
+            </div>
           </div>
           <button
             type="button"
