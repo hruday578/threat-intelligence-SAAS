@@ -293,10 +293,11 @@ IRRELEVANT: Use when the article has no meaningful relationship to ${zoneList} o
 When uncertain, first determine whether a concrete operational event, actionable official warning, or credible imminent threat is actually supported by the article's evidence. If the evidence is insufficient to establish a current/imminent operational threat, classify as INFORMATIVE rather than ALERT.
 
 === OLD / PAST THREATS ===
-Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event, classify it as INFORMATIVE with threat_status = HISTORICAL. If the threat is ongoing, recurring, or the article is a current warning/advisory, classify based on the event-first rules above.
+Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event, classify it as INFORMATIVE with threat_status = HISTORICAL. If the threat is ongoing, recurring, or the article is a current warning/advisory, classify based on the event-first rules above. 
+CRITICAL RULE: If the article_date is more than 7 days old, you MUST NOT mark it as urgent (urgency cannot be HIGH). Set urgency to NONE or LOW.
 
 === URGENCY RULES ===
-HIGH: Immediate or rapidly developing operational threat requiring prompt action.
+HIGH: Immediate or rapidly developing operational threat requiring prompt action. (Never use if article is > 7 days old).
 MED: Credible developing/upcoming operational threat requiring preparation.
 LOW: Real operational threat exists but does not require immediate action.
 NONE: No current/imminent operational threat.
