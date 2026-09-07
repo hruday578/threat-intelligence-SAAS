@@ -294,7 +294,7 @@ When uncertain, first determine whether a concrete operational event, actionable
 
 === OLD / PAST THREATS ===
 Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event, classify it as INFORMATIVE with threat_status = HISTORICAL. If the threat is ongoing, recurring, or the article is a current warning/advisory, classify based on the event-first rules above. 
-CRITICAL RULE: If the article_date is more than 7 days old, you MUST NOT mark it as urgent (urgency cannot be HIGH). Set urgency to NONE or LOW.
+CRITICAL RULE: If the article_date is more than 7 days old, you MUST NOT mark it as HIGH urgency. If it is an operational event, you can still classify it as ALERT but set urgency to LOW.
 
 === URGENCY RULES ===
 HIGH: Immediate or rapidly developing operational threat requiring prompt action. (Never use if article is > 7 days old).
