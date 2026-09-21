@@ -406,6 +406,7 @@ const EMPTY_PROFILE = {
   hq_state: '', hq_pincode: '',
   hq_lat: '', hq_lng: '',
   num_employees: '', annual_revenue: '',
+  target_hazards: [],
   critical_apps: '', key_systems: [], mfa_implemented: false,
   backup_strategy: 'None', cloud_providers: [],
 };
@@ -428,13 +429,14 @@ const SAMPLE_RECORD = {
     hq_address_line2: 'Business Bay Main Boulevard',
     hq_area: 'Business Bay',
     hq_pincode: '00000',
-    hq_lat: '25.185',
-    hq_lng: '55.275',
-    num_employees: '4500',
-    annual_revenue: '120000000',
-    critical_apps: '18',
+    hq_lat: '25.2048',
+    hq_lng: '55.2708',
+    num_employees: '12500',
+    annual_revenue: '1200000000',
+    target_hazards: ['geopolitical conflict', 'physical security', 'cyber attack', 'supply chain disruption', 'compliance'],
+    critical_apps: 'ERP, Control Systems (SCADA)',
     backup_strategy: 'Daily Cloud',
-    key_systems: ['SAP S/4HANA', 'Salesforce CRM', 'SCADA Energy Grid', 'Microsoft 365', 'CrowdStrike Falcon'],
+    key_systems: ['SAP S/4HANA', 'Oracle ERP', 'AWS', 'Salesforce CRM', 'SCADA Energy Grid', 'Microsoft 365', 'CrowdStrike Falcon'],
     cloud_providers: ['AWS', 'Microsoft Azure'],
     mfa_implemented: true
   },
@@ -455,7 +457,15 @@ const SAMPLE_RECORD = {
 //  Utility helpers 
 function loadProfiles() {
   try {
-    const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (list && list.length > 0) {
+      list = list.map(p => {
+        if (p.profile && typeof p.profile.target_hazards === 'string') {
+          p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return p;
+      });
+    }
     if (!list || list.length === 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([SAMPLE_RECORD]));
       return [SAMPLE_RECORD];
@@ -504,14 +514,15 @@ function regionMatchesText(region, ...texts) {
 //  Sub-components 
 
 function TagInput({ label, tags = [], presets = [], onAdd, onRemove, placeholder = 'Type & Enter…' }) {
+  const safeTags = Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(s=>s.trim()).filter(Boolean) : []);
   const [input, setInput] = useState('');
-  const suggestions = presets.filter(p => p.toLowerCase().includes(input.toLowerCase()) && !tags.includes(p));
-  const add = (t) => { const v = t.trim(); if (v && !tags.includes(v)) onAdd(v); setInput(''); };
+  const suggestions = presets.filter(p => p.toLowerCase().includes(input.toLowerCase()) && !safeTags.includes(p));
+  const add = (t) => { const v = t.trim(); if (v && !safeTags.includes(v)) onAdd(v); setInput(''); };
   return (
     <div className="ra-field">
       <label className="ra-label">{label}</label>
       <div className="ra-tag-box">
-        {tags.map(t => (
+        {safeTags.map(t => (
           <span key={t} className="ra-tag">
             {t}
             <button onClick={() => onRemove(t)} className="ra-tag-remove">×</button>
@@ -1083,6 +1094,17 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
             <label className="ra-label">Annual Revenue (USD)</label>
             <input className="ra-input" type="number" min="0" value={profile.annual_revenue} onChange={e => setP('annual_revenue', e.target.value)} placeholder="e.g. 25000000" />
           </div>
+          <div className="ra-field ra-field--lg" style={{ gridColumn: '1 / -1' }}>
+            <TagInput 
+              label="Potential Threats & Risks (Target Hazards) *"
+              tags={profile.target_hazards || []}
+              presets={['Natural Disaster', 'Wildfire', 'Flood', 'Earthquake', 'Hurricane', 'Tornado', 'Heatwave', 'Cyber Attack', 'Data Breach', 'Explosion', 'Chemical Spill', 'Power Outage', 'Terrorism', 'Civil Unrest', 'Riot', 'Supply Chain Disruption']}
+              onAdd={t => setP('target_hazards', [...(profile.target_hazards || []), t])}
+              onRemove={t => setP('target_hazards', (profile.target_hazards || []).filter(h => h !== t))}
+              placeholder="e.g. Cyber Attack, Factory Fire"
+            />
+            <p style={{ fontSize: 9, color: '#9ca3af', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>These hazards will automatically power your background intelligence queries.</p>
+          </div>
         </div>
 
         {/* ── Registered Office / HQ Address ── */}
@@ -1192,7 +1214,7 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
                 handleDelete(activeProfileId);
               } else {
                 if (window.confirm("Are you sure you want to reset all fields in this profile draft?")) {
-                  setP('company_name', ''); setP('industry', ''); setP('hq_country', ''); setP('hq_city', ''); setP('num_employees', ''); setP('annual_revenue', ''); setP('hq_address_line1', ''); setP('hq_address_line2', ''); setP('hq_area', ''); setP('hq_state', ''); setP('hq_pincode', ''); setP('hq_lat', ''); setP('hq_lng', '');
+                  setP('company_name', ''); setP('industry', ''); setP('hq_country', ''); setP('hq_city', ''); setP('num_employees', ''); setP('annual_revenue', ''); setP('hq_address_line1', ''); setP('hq_address_line2', ''); setP('hq_area', ''); setP('hq_state', ''); setP('hq_pincode', ''); setP('hq_lat', ''); setP('hq_lng', ''); setP('target_hazards', []);
                 }
               }
             }}

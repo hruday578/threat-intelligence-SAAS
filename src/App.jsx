@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { COUNTRIES } from './data/countries';
 import { regionsByCountry } from './data/regions';
 import { citiesByState } from './data/cities';
@@ -444,15 +447,16 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
 }
 
 function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [] }) {
+  const safeTags = Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(s=>s.trim()).filter(Boolean) : []);
   const [input, setInput] = useState('');
   const [showSuggest, setShowSuggest] = useState(false);
-  const suggestions = suggestionsLibrary.filter(s => s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s));
-  const addTag = (t) => { if (t && !tags.includes(t)) onAdd(t); setInput(''); setShowSuggest(false); };
+  const suggestions = suggestionsLibrary.filter(s => s.toLowerCase().includes(input.toLowerCase()) && !safeTags.includes(s));
+  const addTag = (t) => { if (t && !safeTags.includes(t)) onAdd(t); setInput(''); setShowSuggest(false); };
   return (
     <div className="flex-1 min-w-[200px] relative">
-      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} ({tags.length})</label>
+      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} ({safeTags.length})</label>
       <div className="min-h-[40px] w-full bg-white border border-gray-100 rounded-xl px-2 py-1 flex flex-wrap gap-1 items-center shadow-sm focus-within:border-red-500/20 transition-all">
-        {tags.map(t => (
+        {safeTags.map(t => (
           <span key={t} className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1">
             {t} <button onClick={() => onRemove(t)} className="hover:text-red-200">×</button>
           </span>
@@ -687,6 +691,302 @@ function ConceptInput({ label, concepts = [], onChange }) {
   );
 }
 
+// ── DASHBOARD MINI-MAP ──────────────────────────────────────────────────────
+// Lightweight map preview for Dashboard Overview. Shows alert/info markers
+// with auto-fitted bounds. Clicking anywhere navigates to the full Maps page.
+
+const MINI_MAP_COORDS = {
+  "Global": { lat: 20, lon: 0 },
+  "Tokyo": { lat: 35.6762, lon: 139.6503 }, "Frankfurt": { lat: 50.1109, lon: 8.6821 },
+  "Houston": { lat: 29.7604, lon: -95.3698 }, "Sydney": { lat: -33.8688, lon: 151.2093 },
+  "Cape Town": { lat: -33.9249, lon: 18.4241 }, "Mumbai": { lat: 19.0760, lon: 72.8777 },
+  "London": { lat: 51.5074, lon: -0.1278 }, "Bangalore": { lat: 12.9716, lon: 77.5946 },
+  "New York": { lat: 40.7128, lon: -74.0060 }, "San Francisco": { lat: 37.7749, lon: -122.4194 },
+  "Philippines": { lat: 14.5995, lon: 120.9842 }, "Manila": { lat: 14.5995, lon: 120.9842 },
+  "Mindanao": { lat: 7.0731, lon: 125.6128 }, "Japan": { lat: 35.6762, lon: 139.6503 },
+  "China": { lat: 39.9042, lon: 116.4074 }, "Beijing": { lat: 39.9042, lon: 116.4074 },
+  "Shanghai": { lat: 31.2304, lon: 121.4737 }, "India": { lat: 28.6139, lon: 77.2090 },
+  "New Delhi": { lat: 28.6139, lon: 77.2090 }, "Delhi": { lat: 28.6139, lon: 77.2090 },
+  "Chennai": { lat: 13.0827, lon: 80.2707 }, "Kolkata": { lat: 22.5726, lon: 88.3639 },
+  "Hyderabad": { lat: 17.3850, lon: 78.4867 }, "Pune": { lat: 18.5204, lon: 73.8567 },
+  "Ahmedabad": { lat: 23.0225, lon: 72.5714 }, "Maharashtra": { lat: 19.0760, lon: 72.8777 },
+  "Kerala": { lat: 10.8505, lon: 76.2711 }, "Karnataka": { lat: 15.3173, lon: 75.7139 },
+  "Odisha": { lat: 20.9517, lon: 85.0985 }, "Pakistan": { lat: 33.6844, lon: 73.0479 },
+  "Islamabad": { lat: 33.6844, lon: 73.0479 }, "Karachi": { lat: 24.8607, lon: 67.0011 },
+  "Lahore": { lat: 31.5204, lon: 74.3587 }, "Afghanistan": { lat: 34.5553, lon: 69.2075 },
+  "Kabul": { lat: 34.5553, lon: 69.2075 }, "Iran": { lat: 35.6892, lon: 51.3890 },
+  "Tehran": { lat: 35.6892, lon: 51.3890 }, "Iraq": { lat: 33.3152, lon: 44.3661 },
+  "Baghdad": { lat: 33.3152, lon: 44.3661 }, "Syria": { lat: 33.5138, lon: 36.2765 },
+  "Damascus": { lat: 33.5138, lon: 36.2765 }, "Israel": { lat: 31.7683, lon: 35.2137 },
+  "Jerusalem": { lat: 31.7683, lon: 35.2137 }, "Tel Aviv": { lat: 32.0853, lon: 34.7818 },
+  "Palestine": { lat: 31.9522, lon: 35.2332 }, "Gaza": { lat: 31.3547, lon: 34.3088 },
+  "Lebanon": { lat: 33.8938, lon: 35.5018 }, "Beirut": { lat: 33.8938, lon: 35.5018 },
+  "Turkey": { lat: 39.9334, lon: 32.8597 }, "Istanbul": { lat: 41.0082, lon: 28.9784 },
+  "Saudi Arabia": { lat: 24.7136, lon: 46.6753 }, "Riyadh": { lat: 24.7136, lon: 46.6753 },
+  "United Arab Emirates": { lat: 25.2048, lon: 55.2708 }, "Dubai": { lat: 25.2048, lon: 55.2708 },
+  "Egypt": { lat: 30.0444, lon: 31.2357 }, "Cairo": { lat: 30.0444, lon: 31.2357 },
+  "South Africa": { lat: -33.9249, lon: 18.4241 }, "Nigeria": { lat: 9.0579, lon: 7.4951 },
+  "Lagos": { lat: 6.5244, lon: 3.3792 }, "Kenya": { lat: -1.2921, lon: 36.8219 },
+  "Nairobi": { lat: -1.2921, lon: 36.8219 }, "Ethiopia": { lat: 9.0250, lon: 38.7469 },
+  "Russia": { lat: 55.7558, lon: 37.6173 }, "Moscow": { lat: 55.7558, lon: 37.6173 },
+  "Ukraine": { lat: 50.4501, lon: 30.5234 }, "Kyiv": { lat: 50.4501, lon: 30.5234 },
+  "Germany": { lat: 52.5200, lon: 13.4050 }, "Berlin": { lat: 52.5200, lon: 13.4050 },
+  "France": { lat: 48.8566, lon: 2.3522 }, "Paris": { lat: 48.8566, lon: 2.3522 },
+  "Italy": { lat: 41.9028, lon: 12.4964 }, "Spain": { lat: 40.4168, lon: -3.7038 },
+  "United Kingdom": { lat: 51.5074, lon: -0.1278 },
+  "United States": { lat: 38.9072, lon: -77.0369 }, "Washington": { lat: 38.9072, lon: -77.0369 },
+  "Los Angeles": { lat: 34.0522, lon: -118.2437 }, "Chicago": { lat: 41.8781, lon: -87.6298 },
+  "California": { lat: 36.7783, lon: -119.4179 }, "Texas": { lat: 31.9686, lon: -99.9018 },
+  "Florida": { lat: 27.9944, lon: -81.7603 }, "Canada": { lat: 45.4215, lon: -75.6972 },
+  "Toronto": { lat: 43.6532, lon: -79.3832 }, "Mexico": { lat: 19.4326, lon: -99.1332 },
+  "Brazil": { lat: -15.7975, lon: -47.8919 }, "São Paulo": { lat: -23.5505, lon: -46.6333 },
+  "Argentina": { lat: -34.6037, lon: -58.3816 }, "Colombia": { lat: 4.7110, lon: -74.0721 },
+  "Australia": { lat: -33.8688, lon: 151.2093 }, "Melbourne": { lat: -37.8136, lon: 144.9631 },
+  "South Korea": { lat: 37.5665, lon: 126.9780 }, "Seoul": { lat: 37.5665, lon: 126.9780 },
+  "Taiwan": { lat: 25.0330, lon: 121.5654 }, "Taipei": { lat: 25.0330, lon: 121.5654 },
+  "Singapore": { lat: 1.3521, lon: 103.8198 }, "Thailand": { lat: 13.7563, lon: 100.5018 },
+  "Bangkok": { lat: 13.7563, lon: 100.5018 }, "Vietnam": { lat: 21.0278, lon: 105.8342 },
+  "Indonesia": { lat: -6.2088, lon: 106.8456 }, "Jakarta": { lat: -6.2088, lon: 106.8456 },
+  "Malaysia": { lat: 3.1390, lon: 101.6869 }, "Myanmar": { lat: 16.8661, lon: 96.1951 },
+  "Bangladesh": { lat: 23.8103, lon: 90.4125 }, "Dhaka": { lat: 23.8103, lon: 90.4125 },
+  "Sri Lanka": { lat: 6.9271, lon: 79.8612 }, "Nepal": { lat: 27.7172, lon: 85.3240 },
+  "Pathanamthitta": { lat: 9.2648, lon: 76.7870 }, "Wayanad": { lat: 11.6854, lon: 76.1320 },
+  "Kochi": { lat: 9.9312, lon: 76.2673 }, "Thiruvananthapuram": { lat: 8.5241, lon: 76.9366 },
+};
+
+function MiniMapAutoFit({ markers }) {
+  const map = useMap();
+  const fittedRef = useRef(false);
+  useEffect(() => {
+    const valid = markers.filter(m => m.lat !== 20 || m.lon !== 0);
+    if (valid.length > 0 && !fittedRef.current) {
+      const bounds = L.latLngBounds(valid.map(m => [m.lat, m.lon]));
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
+      fittedRef.current = true;
+    }
+  }, [markers, map]);
+  return null;
+}
+
+function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = [] }) {
+  const { markers, companySites, allPoints } = useMemo(() => {
+    const validArticles = (articles || []).filter(a => a?.ai?.classification !== 'IRRELEVANT');
+
+    const locationGroups = {};
+    for (const art of validArticles) {
+      const loc = art.ai?.exact_location?.trim() || art.ai?.region?.trim() || 'Global';
+      let coords = MINI_MAP_COORDS[loc];
+      if (!coords) {
+        const parts = loc.split(',').map(p => p.trim()).reverse();
+        for (const part of parts) {
+          coords = MINI_MAP_COORDS[part];
+          if (coords) break;
+          const key = Object.keys(MINI_MAP_COORDS).find(k => k.toLowerCase() === part.toLowerCase());
+          if (key) { coords = MINI_MAP_COORDS[key]; break; }
+        }
+      }
+      if (!coords) {
+        const regionLower = loc.toLowerCase();
+        const found = Object.keys(MINI_MAP_COORDS).find(k => regionLower.includes(k.toLowerCase()) && k.length > 3);
+        coords = found ? MINI_MAP_COORDS[found] : MINI_MAP_COORDS["Global"];
+      }
+
+      const key = `${coords.lat.toFixed(2)}_${coords.lon.toFixed(2)}`;
+      if (!locationGroups[key]) {
+        locationGroups[key] = { lat: coords.lat, lon: coords.lon, label: loc, alerts: 0, reports: 0, hazards: new Set(), articles: [] };
+      }
+      if (art.ai?.classification === 'ALERT') locationGroups[key].alerts++;
+      else locationGroups[key].reports++;
+      if (art.ai?.hazard) locationGroups[key].hazards.add(art.ai.hazard);
+      locationGroups[key].articles.push(art);
+    }
+
+    const sites = [];
+    if (companyLocations && companyLocations.length > 0) {
+      companyLocations.forEach(cl => {
+        const place = cl.city || cl.country;
+        if (!place) return;
+        let c = MINI_MAP_COORDS[place];
+        if (!c) {
+          const key = Object.keys(MINI_MAP_COORDS).find(k => k.toLowerCase() === place.toLowerCase());
+          if (key) c = MINI_MAP_COORDS[key];
+        }
+        if (c) {
+          sites.push({
+            lat: c.lat,
+            lon: c.lon,
+            label: `${cl.city || cl.country}`,
+            type: cl.location_type || 'Facility',
+            headcount: cl.headcount,
+            criticality: cl.criticality
+          });
+        }
+      });
+    }
+
+    const threatMarkers = Object.values(locationGroups);
+    const combined = [...threatMarkers, ...sites];
+
+    return { markers: threatMarkers, companySites: sites, allPoints: combined };
+  }, [articles, companyLocations]);
+
+  return (
+    <div
+      className="relative rounded-3xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition-all cursor-pointer group"
+      style={{ minHeight: '320px', height: '100%' }}
+      onClick={onNavigateToMaps}
+    >
+      {/* Header overlay */}
+      <div className="absolute top-0 left-0 right-0 z-[1000] p-4 pb-2 pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 70%, transparent 100%)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <h2 className="text-xs font-black text-white uppercase tracking-widest">Global Threat & Facility Map</h2>
+          </div>
+          <div className="flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[8px] font-black text-white/60 uppercase tracking-wider">Open Full Map</span>
+            <svg className="w-3 h-3 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+          </div>
+        </div>
+        {(markers.length > 0 || companySites.length > 0) && (
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            {companySites.length > 0 && (
+              <span className="text-[8px] font-bold text-cyan-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" /> {companySites.length} Facilities
+              </span>
+            )}
+            <span className="text-[8px] font-bold text-red-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {markers.reduce((s, m) => s + m.alerts, 0)} Active Alerts
+            </span>
+            <span className="text-[8px] font-bold text-blue-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {markers.reduce((s, m) => s + m.reports, 0)} Reports
+            </span>
+            <span className="text-[8px] font-bold text-white/40">{markers.length} Threat Zones</span>
+          </div>
+        )}
+      </div>
+
+      {/* Map */}
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        style={{ height: '100%', width: '100%', minHeight: '320px' }}
+        zoomControl={false}
+        scrollWheelZoom={false}
+        dragging={false}
+        doubleClickZoom={false}
+        attributionControl={false}
+        className="z-0"
+      >
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <MiniMapAutoFit markers={allPoints} />
+
+        {/* Company Sites */}
+        {companySites.map((s, i) => (
+          <CircleMarker
+            key={`cs-${i}`}
+            center={[s.lat, s.lon]}
+            radius={8}
+            pathOptions={{
+              fillColor: '#06b6d4',
+              fillOpacity: 0.85,
+              color: '#ffffff',
+              weight: 2,
+              opacity: 1,
+            }}
+          >
+            <LeafletTooltip direction="top" offset={[0, -8]}>
+              <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minWidth: '120px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 900, color: '#0891b2', textTransform: 'uppercase' }}>🏢 {s.label}</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#374151', marginTop: '2px' }}>{s.type} · Criticality: {s.criticality || 'Normal'}</div>
+                {s.headcount && <div style={{ fontSize: '8px', color: '#6b7280' }}>Personnel: {s.headcount}</div>}
+              </div>
+            </LeafletTooltip>
+          </CircleMarker>
+        ))}
+
+        {markers.map((m, i) => {
+          const isAlert = m.alerts > 0;
+          const total = m.alerts + m.reports;
+          const radius = Math.min(Math.max(total * 3, 6), 20);
+
+          return (
+            <CircleMarker
+              key={`dm-${i}`}
+              center={[m.lat, m.lon]}
+              radius={radius}
+              pathOptions={{
+                fillColor: isAlert ? '#ef4444' : '#60a5fa',
+                fillOpacity: 0.7,
+                color: isAlert ? '#dc2626' : '#3b82f6',
+                weight: 2,
+                opacity: 0.9,
+              }}
+            >
+              <LeafletTooltip
+                direction="top"
+                offset={[0, -8]}
+                className="mini-map-tooltip"
+              >
+                <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minWidth: '120px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
+                  <div style={{ marginTop: '3px', fontSize: '9px', color: '#6b7280' }}>
+                    {m.alerts > 0 && <span style={{ color: '#ef4444', fontWeight: 800 }}>⚠ {m.alerts} Alert{m.alerts > 1 ? 's' : ''} </span>}
+                    {m.reports > 0 && <span>📄 {m.reports} Report{m.reports > 1 ? 's' : ''}</span>}
+                  </div>
+                  {m.hazards.size > 0 && (
+                    <div style={{ marginTop: '3px', fontSize: '8px', color: '#9ca3af' }}>
+                      {[...m.hazards].slice(0, 3).join(' · ')}
+                    </div>
+                  )}
+                </div>
+              </LeafletTooltip>
+            </CircleMarker>
+          );
+        })}
+
+        {/* Pulsing animation rings for alert markers */}
+        {markers.filter(m => m.alerts > 0).map((m, i) => (
+          <CircleMarker
+            key={`pulse-${i}`}
+            center={[m.lat, m.lon]}
+            radius={Math.min(Math.max((m.alerts + m.reports) * 3, 6), 20) + 6}
+            pathOptions={{
+              fillColor: 'transparent',
+              fillOpacity: 0,
+              color: '#ef4444',
+              weight: 1.5,
+              opacity: 0.4,
+              dashArray: '4 4',
+            }}
+          />
+        ))}
+      </MapContainer>
+
+      {/* Empty state overlay */}
+      {markers.length === 0 && (
+        <div className="absolute inset-0 z-[999] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+          <svg className="w-8 h-8 text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Run Analysis to See Threats</p>
+          <p className="text-[8px] font-semibold text-gray-500 mt-1">Click to open full threat map</p>
+        </div>
+      )}
+
+      {/* Click overlay hint */}
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] p-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.8) 0%, transparent 100%)' }}>
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">Click to explore full threat map</span>
+          <svg className="w-3.5 h-3.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 //  Search Query Bar (visual display of active filters) 
 function SearchQueryBar({ keywords, concepts, locs, states, cities }) {
   const groups = [];
@@ -786,11 +1086,18 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-//  Main Application 
+function getRiskScoreMeta(s) {
+  if (s >= 70) return { text: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'CRITICAL RISK', stroke: '#dc2626', glow: 'rgba(220, 38, 38, 0.35)' };
+  if (s >= 45) return { text: '#ea580c', bg: '#fff7ed', border: '#ffedd5', label: 'HIGH RISK', stroke: '#ea580c', glow: 'rgba(234, 88, 12, 0.35)' };
+  if (s >= 25) return { text: '#d97706', bg: '#fefce8', border: '#fef08a', label: 'MODERATE RISK', stroke: '#d97706', glow: 'rgba(217, 119, 6, 0.35)' };
+  return { text: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'LOW RISK', stroke: '#16a34a', glow: 'rgba(22, 163, 74, 0.35)' };
+}
+
+// ── Main Application ──────────────────────────────────────────────────────────
 
 function AppMain() {
   const { user, session, organization, member, loading: authLoading, signOut } = useAuth();
-  const [configExpanded, setConfigExpanded] = useState(true);
+  const [configExpanded, setConfigExpanded] = useState(false);
   const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '8745555f-c1dc-4dd7-a57d-9e664d846c3e');
   const [aiKey, setAiKey] = useState('');
   const [provider, setProvider] = useState('groq-120b');
@@ -851,10 +1158,12 @@ function AppMain() {
   };
   const [autoPilot, setAutoPilot] = useState(false);
   const [autoPilotInterval, setAutoPilotInterval] = useState(5);
+  const [timeUntilScan, setTimeUntilScan] = useState(0);
   const [pushedAlerts, setPushedAlerts] = useState(new Set());
   const [radius, setRadius] = useState(0);
   const [expandedZones, setExpandedZones] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
+  const [dashboardView, setDashboardView] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [ledgerFilter, setLedgerFilter] = useState('ALL');
   const [govExpanded, setGovExpanded] = useState(true);
@@ -879,16 +1188,28 @@ function AppMain() {
   }, [employees]);
 
   const [savedProfiles, setSavedProfiles] = useState([]);
-  const [selectedProfileId, setSelectedProfileId] = useState('');
+  const [selectedProfileId, setSelectedProfileId] = useState('none');
 
   // Load saved profiles from localStorage on mount & page changes
+  // Applies migration: converts legacy string target_hazards to arrays
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('alertem_risk_profiles') || '[]');
-      setSavedProfiles(stored);
-      if (stored.length > 0 && !selectedProfileId) {
-        setSelectedProfileId(String(stored[0].id));
+      let stored = JSON.parse(localStorage.getItem('alertem_risk_profiles') || '[]');
+      if (stored && stored.length > 0) {
+        stored = stored.map(p => {
+          if (p.profile) {
+            // Migrate legacy string hazards to array
+            if (typeof p.profile.target_hazards === 'string') {
+              p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
+            }
+            if (!Array.isArray(p.profile.target_hazards)) {
+              p.profile.target_hazards = [];
+            }
+          }
+          return p;
+        });
       }
+      setSavedProfiles(stored);
     } catch (e) {
       console.error(e);
     }
@@ -922,11 +1243,14 @@ function AppMain() {
 
     const zonesStr = Array.from(cities).filter(Boolean).join(', ');
 
+    const hazardsArr = Array.isArray(profile.target_hazards) ? profile.target_hazards : [];
+
     setParams(prev => ({
       ...prev,
       locs: matchedLocs
     }));
     setZonesInput(zonesStr);
+    setKeywords(hazardsArr);
     addLog('CONFIG', 'Risk Profile Loaded', `Loaded company location configuration for "${targetProfile.profile?.company_name || 'Selected Profile'}"`, {
       company: targetProfile.profile?.company_name,
       matchedCountries: matchedLocs.map(l => l.label),
@@ -936,14 +1260,24 @@ function AppMain() {
 
   // Sync state if activePage changes or profile changes
   useEffect(() => {
-    if (activePage !== 'dashboard') return;
+    if (activePage !== 'dashboard' && activePage !== 'explorer') return;
+
+    // Dashboard: auto-select the first saved profile so the query is pre-populated
+    if (selectedProfileId === 'none' && activePage === 'dashboard' && savedProfiles.length > 0) {
+      setSelectedProfileId(String(savedProfiles[0].id));
+      return; // will re-run with the new selectedProfileId
+    }
+
+    // Explorer or no profile selected: clear fields
     if (selectedProfileId === 'none') {
       setParams(prev => ({ ...prev, locs: [] }));
       setZonesInput('');
+      setKeywords([]);
       return;
     }
+
     if (savedProfiles.length > 0) {
-      const current = savedProfiles.find(p => String(p.id) === String(selectedProfileId)) || savedProfiles[0];
+      const current = savedProfiles.find(p => String(p.id) === String(selectedProfileId));
       if (current) {
         populateFromProfile(current);
         if (selectedProfileId !== String(current.id)) {
@@ -980,13 +1314,126 @@ function AppMain() {
   const alertsCount = articles.filter(a => a?.ai?.classification === 'ALERT').length;
   const reportsCount = articles.filter(a => a?.ai?.classification === 'INFORMATIVE').length;
 
+  // Active Company Profile & Computed Risk Score for Dashboard
+  const currentProfile = useMemo(() => {
+    if (savedProfiles && savedProfiles.length > 0) {
+      const found = savedProfiles.find(p => String(p.id) === String(selectedProfileId));
+      return found || savedProfiles[0];
+    }
+    return null;
+  }, [savedProfiles, selectedProfileId]);
+
+  const calculatedRiskScore = useMemo(() => {
+    if (!currentProfile) return 48;
+    if (typeof currentProfile.risk_score === 'number') return currentProfile.risk_score;
+    const p = currentProfile.profile || {};
+    const locs = currentProfile.locations || [];
+    const vends = currentProfile.vendors || [];
+    let score = 0;
+    const singleSrc = vends.filter(v => v.single_source).length;
+    const criticalVendors = vends.filter(v => v.dependency_level === 'Critical').length;
+    score += Math.min(singleSrc * 10 + criticalVendors * 5, 40);
+    const highLocs = locs.filter(l => l.criticality === 'High').length;
+    score += Math.min(highLocs * 6, 20);
+    if (!p.mfa_implemented) score += 10;
+    if (p.backup_strategy === 'None') score += 10;
+    if (!p.critical_apps || parseInt(p.critical_apps) === 0) score += 5;
+    if ((p.cloud_providers || []).length === 1) score += 8;
+    if ((p.cloud_providers || []).length === 0) score += 15;
+    return Math.min(score, 100);
+  }, [currentProfile]);
+
+  const riskMeta = useMemo(() => getRiskScoreMeta(calculatedRiskScore), [calculatedRiskScore]);
+
+  const facilityExposure = useMemo(() => {
+    const locs = currentProfile?.locations || [];
+    const alertArticles = articles.filter(a => a?.ai?.classification === 'ALERT');
+    if (!locs.length || !alertArticles.length) {
+      return { exposedLocations: [], exposedCount: 0, total: locs.length, safeCount: locs.length, topHazard: alertArticles[0]?.ai?.hazard || 'None' };
+    }
+    const exposed = [];
+    locs.forEach(loc => {
+      const matching = alertArticles.filter(art => {
+        const reg = (art.ai?.region || '').toLowerCase();
+        const exLoc = (art.ai?.exact_location || '').toLowerCase();
+        const city = (loc.city || '').toLowerCase();
+        const country = (loc.country || '').toLowerCase();
+        return (city && (reg.includes(city) || exLoc.includes(city))) ||
+               (country && (reg.includes(country) || exLoc.includes(country)));
+      });
+      if (matching.length > 0) {
+        exposed.push({ loc, count: matching.length, topAlert: matching[0] });
+      }
+    });
+    return {
+      exposedLocations: exposed,
+      exposedCount: exposed.length,
+      total: locs.length,
+      safeCount: Math.max(0, locs.length - exposed.length),
+      topHazard: alertArticles[0]?.ai?.hazard || 'Geopolitical Event'
+    };
+  }, [currentProfile, articles]);
+
+  const personnelExposure = useMemo(() => {
+    const alertArticles = (articles || []).filter(a => a?.ai?.classification === 'ALERT');
+    const totalRegistered = (employees || []).length;
+    
+    // Facility headcount from risk profile
+    const facilityHeadcount = (currentProfile?.locations || []).reduce(
+      (sum, l) => sum + (parseInt(l.headcount) || 0), 0
+    );
+
+    // Check if any registered employees are located in an active alert zone
+    let atRiskEmployees = 0;
+    const atRiskList = [];
+    if (totalRegistered > 0 && alertArticles.length > 0) {
+      employees.forEach(emp => {
+        const empCountry = (emp.country || '').toLowerCase();
+        const empState = (emp.state || '').toLowerCase();
+        const matchingAlert = alertArticles.find(art => {
+          const reg = (art.ai?.region || '').toLowerCase();
+          const exLoc = (art.ai?.exact_location || '').toLowerCase();
+          return (empCountry && (reg.includes(empCountry) || exLoc.includes(empCountry))) ||
+                 (empState && (reg.includes(empState) || exLoc.includes(empState)));
+        });
+        if (matchingAlert) {
+          atRiskEmployees++;
+          atRiskList.push({ employee: emp, alert: matchingAlert });
+        }
+      });
+    }
+
+    const dispatchedCount = Object.keys(dispatchedAlerts || {}).length;
+
+    return {
+      totalRegistered,
+      facilityHeadcount,
+      atRiskEmployees,
+      atRiskList,
+      dispatchedCount,
+      allSafe: atRiskEmployees === 0
+    };
+  }, [employees, articles, currentProfile, dispatchedAlerts]);
+
+  const handleExecuteRef = useRef(null);
+
   useEffect(() => {
-    if (!autoPilot || !user) return;
+    if (!autoPilot || !user) {
+      setTimeUntilScan(0);
+      return;
+    }
+    let remaining = autoPilotInterval * 60;
+    setTimeUntilScan(remaining);
     const interval = setInterval(() => {
-      handleExecute(true);
-    }, autoPilotInterval * 60 * 1000);
+      remaining -= 1;
+      if (remaining <= 0) {
+        if (handleExecuteRef.current) handleExecuteRef.current(true);
+        remaining = autoPilotInterval * 60;
+      }
+      setTimeUntilScan(remaining);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [autoPilot, autoPilotInterval, user, newsKey, aiKey, keywords, params, zonesInput, provider]);
+  }, [autoPilot, autoPilotInterval, user]);
 
   const handleExecute = async (isAuto = false) => {
     if (!newsKey) return setError('Configuration Incomplete');
@@ -1577,6 +2024,8 @@ function AppMain() {
     } finally { setLoading(false); }
   };
 
+  handleExecuteRef.current = handleExecute;
+
   if (authLoading) {
     return (
       <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white space-y-4 font-sans">
@@ -1655,7 +2104,7 @@ function AppMain() {
             }}
           />
         )}
-        {activePage === 'dashboard' && <>
+        {(activePage === 'dashboard' || activePage === 'explorer') && <>
           <header className="px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-6">
               <Logo className="h-16" />
@@ -1668,7 +2117,23 @@ function AppMain() {
               )}
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
+              {error && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 rounded-lg max-w-[250px] shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shrink-0" />
+                  <span className="text-[8px] font-black text-red-600 uppercase tracking-widest truncate" title={error}>{error}</span>
+                </div>
+              )}
+              <button 
+                onClick={() => handleExecute()}
+                disabled={loading}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh Analysis"
+              >
+                <svg className={`w-4 h-4 ${loading ? 'animate-spin text-red-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+              <div className="text-right hidden sm:block pl-2 border-l border-gray-100">
                 <p className="text-[10px] font-black text-gray-900 leading-none">{user?.email}</p>
                 <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{member?.role || 'Analyst'}</p>
               </div>
@@ -1676,6 +2141,216 @@ function AppMain() {
             </div>
           </header>
 
+          {activePage === 'dashboard' && dashboardView === 'overview' ? (
+            <div className="flex-1 p-8 bg-gray-50 flex flex-col overflow-auto">
+              <h1 className="text-lg font-black uppercase tracking-widest text-gray-900 mb-6">Dashboard Overview</h1>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+                {/* 1. Active Threat Posture */}
+                <button 
+                  onClick={() => setDashboardView('detailed')}
+                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-red-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-red-500/10 transition-all" />
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Live Intel</span>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                        alertsCount > 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      }`}>
+                        {alertsCount > 0 ? 'Active Threats' : 'Perimeter Clear'}
+                      </span>
+                    </div>
+
+                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-red-600 transition-colors">
+                      Active Threat Posture
+                    </h2>
+                    <p className="text-[11px] font-medium text-gray-400">
+                      {alertsCount > 0 ? `${alertsCount} critical threats requiring response` : 'No immediate critical threats detected'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-end justify-between mt-4">
+                    <div>
+                      <span className="text-4xl font-black text-red-600 leading-none tracking-tight">{alertsCount}</span>
+                      <span className="text-xs font-bold text-gray-400 ml-2">Alerts</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-red-600 transition-colors uppercase tracking-wider">
+                      <span>Investigate</span>
+                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-red-50 group-hover:text-red-600 transition-all">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* 2. Organization Risk Index (Replaces Intel Reports) */}
+                <button 
+                  onClick={() => setActivePage('risk-assessment')}
+                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-amber-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                >
+                  <div 
+                    className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl pointer-events-none transition-all opacity-20"
+                    style={{ background: riskMeta.stroke }}
+                  />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5 max-w-[65%]">
+                        <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 truncate" title={currentProfile?.profile?.company_name || 'Enterprise Assessment'}>
+                          {currentProfile?.profile?.company_name || 'Enterprise Profile'}
+                        </span>
+                      </div>
+                      <span 
+                        className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border shrink-0"
+                        style={{ background: riskMeta.bg, color: riskMeta.text, borderColor: riskMeta.border }}
+                      >
+                        {riskMeta.label}
+                      </span>
+                    </div>
+
+                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-amber-600 transition-colors">
+                      Organization Risk Index
+                    </h2>
+                    <p className="text-[11px] font-medium text-gray-400 truncate">
+                      {currentProfile?.locations?.length || 0} Facilities · {currentProfile?.vendors?.length || 0} Vendors · {currentProfile?.profile?.mfa_implemented ? 'MFA Guarded' : 'MFA Inactive'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-end justify-between mt-3">
+                    <div className="flex items-center gap-3">
+                      {/* Mini circular SVG gauge */}
+                      <div className="relative w-11 h-11 flex items-center justify-center">
+                        <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                          <circle cx="22" cy="22" r="18" fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                          <circle
+                            cx="22" cy="22" r="18" fill="none"
+                            stroke={riskMeta.stroke} strokeWidth="4"
+                            strokeDasharray="113.1"
+                            strokeDashoffset={113.1 * (1 - calculatedRiskScore / 100)}
+                            strokeLinecap="round"
+                            style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+                          />
+                        </svg>
+                        <span className="absolute text-[11px] font-black" style={{ color: riskMeta.text }}>
+                          {calculatedRiskScore}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black text-gray-900 leading-none">
+                          {calculatedRiskScore}<span className="text-[10px] font-bold text-gray-400">/100</span>
+                        </div>
+                        <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-1">
+                          Calculated Exposure
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-amber-600 transition-colors uppercase tracking-wider">
+                      <span>Assess</span>
+                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-all">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* 3. Personnel & Crisis Readiness */}
+                <button 
+                  onClick={() => setActivePage('employees')}
+                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-blue-500/10 transition-all" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+                          Personnel Readiness
+                        </span>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                        personnelExposure.atRiskEmployees > 0
+                          ? 'bg-rose-50 text-rose-600 border-rose-100'
+                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>
+                        {personnelExposure.atRiskEmployees > 0
+                          ? `${personnelExposure.atRiskEmployees} Staff in Alert Zone`
+                          : 'Workforce Protected'}
+                      </span>
+                    </div>
+
+                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-blue-600 transition-colors">
+                      Personnel & Crisis Readiness
+                    </h2>
+                    <p className="text-[11px] font-medium text-gray-400 truncate">
+                      {personnelExposure.atRiskEmployees > 0
+                        ? `Emergency alert dispatch advised for ${personnelExposure.atRiskEmployees} personnel`
+                        : `${personnelExposure.totalRegistered > 0 ? `${personnelExposure.totalRegistered} Registered Staff` : `${currentProfile?.locations?.length || 4} Facility Hubs`} · Crisis Dispatch Ready`}
+                    </p>
+                  </div>
+
+                  <div className="flex items-end justify-between mt-4">
+                    <div>
+                      {personnelExposure.atRiskEmployees > 0 ? (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-4xl font-black text-rose-600 leading-none">{personnelExposure.atRiskEmployees}</span>
+                          <span className="text-xs font-bold text-gray-400">/ {personnelExposure.totalRegistered} At Risk</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-4xl font-black text-blue-600 leading-none">
+                            {personnelExposure.totalRegistered > 0
+                              ? personnelExposure.totalRegistered
+                              : (personnelExposure.facilityHeadcount ? personnelExposure.facilityHeadcount.toLocaleString() : '3,000+')}
+                          </span>
+                          <span className="text-xs font-bold text-gray-400">Staff Protected</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-blue-600 transition-colors uppercase tracking-wider">
+                      <span>Manage Staff</span>
+                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Threat Map Preview */}
+              <div className="flex-1 min-h-[320px]">
+                <DashboardMiniMap
+                  articles={articles}
+                  onNavigateToMaps={() => setActivePage('maps')}
+                  companyLocations={currentProfile?.locations || []}
+                />
+              </div>
+            </div>
+          ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {activePage === 'dashboard' && dashboardView === 'detailed' && (
+              <div className="px-4 pt-4 shrink-0 flex items-center">
+                <button 
+                  onClick={() => setDashboardView('overview')}
+                  className="flex items-center gap-2 text-[10px] font-black text-gray-400 hover:text-gray-700 uppercase tracking-widest transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                  Back to Overview
+                </button>
+              </div>
+            )}
+          {activePage !== 'dashboard' && (
           <div className="p-4 pb-1 shrink-0">
             <div className="bg-white border border-gray-100 rounded-3xl p-5 space-y-4 shadow-xl shadow-gray-200/30">
               <div className="flex items-center justify-between">
@@ -1690,6 +2365,23 @@ function AppMain() {
                   </button>
                 </div>
                 <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-2 bg-gray-50/50 border border-gray-100 rounded-lg p-1 px-2.5">
+                    <span className="text-[9px] font-black uppercase text-gray-400">Interval:</span>
+                    <input
+                      type="number"
+                      value={autoPilotInterval}
+                      onChange={e => setAutoPilotInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-8 bg-transparent text-[10px] font-bold text-gray-700 text-center outline-none"
+                      min="1"
+                    />
+                    <span className="text-[9px] font-black uppercase text-gray-400">min</span>
+                  </div>
+                  <button 
+                    onClick={() => { const next = !autoPilot; setAutoPilot(next); addLog('CONFIG', `Auto-Pilot ${next ? 'Enabled' : 'Disabled'}`, `Scanning scheduled every ${autoPilotInterval} minutes`); if (next) { if (handleExecuteRef.current) handleExecuteRef.current(true); } }}
+                    className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${autoPilot ? 'bg-red-600 text-white border-red-600 animate-pulse shadow-lg shadow-red-200' : 'text-gray-400 border-gray-200 hover:text-red-600 hover:border-red-600'}`}
+                  >
+                    {autoPilot ? `Stop Auto-Pilot (${Math.floor(timeUntilScan / 60)}:${(timeUntilScan % 60).toString().padStart(2, '0')})` : 'Start Auto-Pilot'}
+                  </button>
                   <div className="flex items-center gap-2 bg-red-50/50 border border-red-100 rounded-lg p-1 px-2.5">
                     <span className="text-[9px] font-black uppercase text-red-600">Company Profile ({savedProfiles.length}):</span>
                     <select
@@ -1716,20 +2408,7 @@ function AppMain() {
                       )}
                     </select>
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg p-1 px-2">
-                    <span className="text-[9px] font-black uppercase text-gray-400">Scan Every:</span>
-                    <input
-                      type="number"
-                      value={autoPilotInterval}
-                      onChange={e => setAutoPilotInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-10 bg-transparent text-[10px] font-bold text-center outline-none border-b border-gray-200"
-                      min="1"
-                    />
-                    <span className="text-[9px] font-black uppercase text-gray-400">Min</span>
-                  </div>
-                  <button onClick={() => { const next = !autoPilot; setAutoPilot(next); addLog('CONFIG', `Auto-Pilot ${next ? 'Enabled' : 'Disabled'}`, `Scanning scheduled every ${autoPilotInterval} minutes`); }} className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${autoPilot ? 'bg-red-600 text-white border-red-600 animate-pulse shadow-lg shadow-red-200' : 'text-gray-400 border-gray-200 hover:text-red-600 hover:border-red-600'}`}>
-                    {autoPilot ? `Auto-Pilot: ON (${autoPilotInterval}m)` : 'Enable Auto-Pilot'}
-                  </button>
+
                   <button onClick={() => { setKeywords([]); setZonesInput(''); setParams({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] }); addLog('CONFIG', 'Analysis Reset', 'Restored query inputs to baseline default parameters'); }} className="text-[9px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest">Reset Analysis</button>
                 </div>
               </div>
@@ -1816,6 +2495,7 @@ function AppMain() {
               )}
             </div>
           </div>
+          )}
 
           <main className="flex-1 flex overflow-hidden p-6 gap-6 bg-gray-50/50">
             {/* SECTOR 1: SOURCES (Authentic vs Other) */}
@@ -2623,6 +3303,8 @@ function AppMain() {
               )}
             </section>
           </main>
+          </div>
+          )}
         </>
         }
       </div>
