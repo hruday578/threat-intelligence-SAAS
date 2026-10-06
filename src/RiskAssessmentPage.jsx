@@ -40,6 +40,9 @@ const CITY_COORDS = {
   'New York': [40.7128, -74.0060], 'Los Angeles': [34.0522, -118.2437],
   'Chicago': [41.8781, -87.6298], 'Houston': [29.7604, -95.3698],
   'San Francisco': [37.7749, -122.4194], 'Seattle': [47.6062, -122.3321],
+  'Redmond': [47.6740, -122.1215],
+  'Taiwan': [23.6978, 120.9605], 'Taipei': [25.0330, 121.5654], 'Hsinchu': [24.8138, 120.9675],
+  'Ireland': [53.1424, -7.6921], 'Dublin': [53.3498, -6.2603],
   'Canada': [45.4215, -75.6919], 'Toronto': [43.6532, -79.3832],
   'Vancouver': [49.2827, -123.1207], 'Mexico': [19.4326, -99.1332],
   'Brazil': [-15.8267, -47.9218], 'Sao Paulo': [-23.5505, -46.6333],
@@ -143,33 +146,49 @@ function makeIcon(color, size = 14, pulse = false) {
 }
 
 //  World Map Component 
-// Geodesic arc: interpolate N points along great circle between two [lat,lon] coords
-function geodesicArc(from, to, steps) {
-  var pts = [];
-  var lat1 = from[0] * Math.PI / 180;
-  var lon1 = from[1] * Math.PI / 180;
-  var lat2 = to[0] * Math.PI / 180;
-  var lon2 = to[1] * Math.PI / 180;
-  var d = 2 * Math.asin(Math.sqrt(
-    Math.pow(Math.sin((lat2 - lat1) / 2), 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin((lon2 - lon1) / 2), 2)
-  ));
-  if (d === 0) return [from, to];
-  for (var i = 0; i <= steps; i++) {
-    var f = i / steps;
-    var A = Math.sin((1 - f) * d) / Math.sin(d);
-    var B = Math.sin(f * d) / Math.sin(d);
-    var x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
-    var y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
-    var z = A * Math.sin(lat1) + B * Math.sin(lat2);
-    var lat = Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI;
-    var lon = Math.atan2(y, x) * 180 / Math.PI;
-    pts.push([lat, lon]);
+// Clean curved arc between two coordinates, splitting cleanly across antimeridian to prevent horizontal slice artifacts
+function getCurvedArcSegments(from, to, steps = 36) {
+  if (!from || !to) return [];
+  const [lat1, lon1] = from;
+  let [lat2, lon2] = to;
+
+  // Shortest longitude path
+  let dLon = lon2 - lon1;
+  if (dLon > 180) lon2 -= 360;
+  if (dLon < -180) lon2 += 360;
+
+  // Gentle parabolic curve that stays within sensible latitudes
+  const dist = Math.hypot(lat2 - lat1, lon2 - lon1);
+  const arcLift = Math.min(Math.max(dist * 0.10, 2), 12);
+
+  const rawPts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const lat = (1 - t) * lat1 + t * lat2 + Math.sin(t * Math.PI) * arcLift;
+    let lon = (1 - t) * lon1 + t * lon2;
+    // Normalize to [-180, 180]
+    while (lon > 180) lon -= 360;
+    while (lon < -180) lon += 360;
+    rawPts.push([Math.max(Math.min(lat, 75), -75), lon]);
   }
-  return pts;
+
+  // Split into independent polyline segments whenever longitude jumps by > 180 (antimeridian crossing)
+  const segments = [];
+  let curr = [rawPts[0]];
+  for (let i = 1; i < rawPts.length; i++) {
+    if (Math.abs(rawPts[i][1] - rawPts[i - 1][1]) > 180) {
+      if (curr.length > 1) segments.push(curr);
+      curr = [rawPts[i]];
+    } else {
+      curr.push(rawPts[i]);
+    }
+  }
+  if (curr.length > 1) segments.push(curr);
+  return segments;
 }
 
 function RiskWorldMap({ profile, locations, vendors, threats }) {
+  const [showArcs, setShowArcs] = useState(true);
   const critColor = { High: '#ef4444', Medium: '#eab308', Low: '#22c55e' };
   const depColor  = { Critical: '#ef4444', Important: '#f97316', Supplementary: '#6b7280' };
   const threatRegions = (threats || []).map(t => (t.ai?.region || '').toLowerCase());
@@ -180,7 +199,9 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
       (country && r.includes(country.toLowerCase()))
     );
 
-  const hqCoords = resolveCoords(profile.hq_city, profile.hq_country);
+  const hqCoords = (profile.hq_lat && profile.hq_lng && !isNaN(profile.hq_lat) && !isNaN(profile.hq_lng))
+    ? [parseFloat(profile.hq_lat), parseFloat(profile.hq_lng)]
+    : resolveCoords(profile.hq_city, profile.hq_country);
 
   const locPoints = (locations || []).map(loc => ({
     ...loc,
@@ -219,8 +240,26 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
         <span className="ra-wm-legend-item"><span className="ra-wm-dot" style={{ background: '#3b82f6' }} /> Locations</span>
         <span className="ra-wm-legend-item"><span className="ra-wm-dot" style={{ background: '#f97316' }} /> Vendors</span>
         <span className="ra-wm-legend-item"><span className="ra-wm-dot" style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} /> Active Threat</span>
-        <span className="ra-wm-legend-item"><span className="ra-wm-dot" style={{ background: '#ffffff33', border: '1.5px dashed #6366f1' }} /> Arc connection</span>
-        <span className="ra-wm-legend-item" style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 9 }}>OpenStreetMap / CARTO</span>
+        <span className="ra-wm-legend-item"><span className="ra-wm-dot" style={{ background: '#ffffff33', border: '1.5px dashed #6366f1' }} /> Supply Arcs</span>
+        
+        <button
+          onClick={() => setShowArcs(!showArcs)}
+          className="ra-btn ra-btn-sm"
+          style={{
+            marginLeft: '8px',
+            background: showArcs ? '#e0e7ff' : '#f1f5f9',
+            color: showArcs ? '#4338ca' : '#64748b',
+            border: '1px solid ' + (showArcs ? '#c7d2fe' : '#cbd5e1'),
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: '6px'
+          }}
+        >
+          {showArcs ? '✓ Hide Route Arcs' : '+ Show Route Arcs'}
+        </button>
+
+        <span className="ra-wm-legend-item" style={{ marginLeft: 'auto', opacity: 0.4, fontSize: 9 }}>OpenStreetMap / Esri</span>
       </div>
 
       <div className="ra-worldmap-container">
@@ -233,9 +272,12 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
         <MapContainer
           center={initCenter}
           zoom={initZoom}
+          minZoom={2}
+          maxBounds={[[-85, -180], [85, 180]]}
+          worldCopyJump={true}
           style={{ height: '100%', width: '100%', borderRadius: '0 0 0 0', background: '#0b1120' }}
           zoomControl={true}
-          scrollWheelZoom={true}
+          scrollWheelZoom={false}
           attributionControl={false}
         >
           <TileLayer
@@ -282,16 +324,17 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
           {/* Location arcs + markers */}
           {locPoints.map((loc, i) => {
             const col = loc.threatened ? '#ef4444' : (critColor[loc.criticality] || '#3b82f6');
-            const arcPts = hqCoords ? geodesicArc(hqCoords, loc.coords, 48) : null;
+            const arcSegments = (showArcs && hqCoords) ? getCurvedArcSegments(hqCoords, loc.coords, 32) : [];
             const rVal = loc.radius !== undefined && loc.radius !== '' ? parseInt(loc.radius) : 100;
             return (
               <React.Fragment key={'loc' + i}>
-                {arcPts && (
+                {showArcs && arcSegments.map((seg, sIdx) => (
                   <Polyline
-                    positions={arcPts}
-                    pathOptions={{ color: col, weight: loc.criticality === 'High' ? 2.2 : 1.6, opacity: 0.75, dashArray: loc.threatened ? '4 4' : undefined }}
+                    key={'loc-arc-' + i + '-' + sIdx}
+                    positions={seg}
+                    pathOptions={{ color: col, weight: loc.criticality === 'High' ? 2 : 1.4, opacity: 0.65, dashArray: loc.threatened ? '4 4' : undefined }}
                   />
-                )}
+                ))}
                 <Circle
                   center={loc.coords}
                   radius={rVal * 1000}
@@ -325,16 +368,17 @@ function RiskWorldMap({ profile, locations, vendors, threats }) {
           {/* Vendor arcs + markers */}
           {vendPoints.map((v, i) => {
             const col = v.threatened ? '#ef4444' : (depColor[v.dependency_level] || '#f97316');
-            const arcPts = hqCoords ? geodesicArc(hqCoords, v.coords, 48) : null;
-            const weight = v.dependency_level === 'Critical' ? 2.5 : v.dependency_level === 'Important' ? 2 : 1.4;
+            const arcSegments = (showArcs && hqCoords) ? getCurvedArcSegments(hqCoords, v.coords, 32) : [];
+            const weight = v.dependency_level === 'Critical' ? 2 : v.dependency_level === 'Important' ? 1.6 : 1.2;
             return (
               <React.Fragment key={'vend' + i}>
-                {arcPts && (
+                {showArcs && arcSegments.map((seg, sIdx) => (
                   <Polyline
-                    positions={arcPts}
-                    pathOptions={{ color: col, weight: weight, opacity: 0.65, dashArray: v.single_source ? '4 5' : '10 6' }}
+                    key={'vend-arc-' + i + '-' + sIdx}
+                    positions={seg}
+                    pathOptions={{ color: col, weight: weight, opacity: 0.55, dashArray: v.single_source ? '4 5' : '8 6' }}
                   />
-                )}
+                ))}
                 <Marker position={v.coords} icon={makeIcon(col, 14, v.threatened)}>
                   <Popup>
                     <div style={{ minWidth: 180, fontFamily: 'sans-serif' }}>
@@ -734,17 +778,17 @@ function RiskScoreRing({ score }) {
   return (
     <div className="ra-score-ring-wrap">
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="12" />
         <circle
           cx="70" cy="70" r={radius} fill="none"
           stroke={c.stroke} strokeWidth="12"
           strokeDasharray={`${dash} ${circ}`}
           strokeLinecap="round"
           transform="rotate(-90 70 70)"
-          style={{ transition: 'stroke-dasharray 0.8s ease', filter: `drop-shadow(0 0 8px ${c.stroke}88)` }}
+          style={{ transition: 'stroke-dasharray 0.8s ease', filter: `drop-shadow(0 0 6px ${c.stroke}66)` }}
         />
-        <text x="70" y="64" textAnchor="middle" fill="white" fontSize="24" fontWeight="900">{score}</text>
-        <text x="70" y="80" textAnchor="middle" fill={c.stroke} fontSize="8" fontWeight="800">/100</text>
+        <text x="70" y="66" textAnchor="middle" fill="#0f172a" fontSize="30" fontWeight="900">{score}</text>
+        <text x="70" y="84" textAnchor="middle" fill="#64748b" fontSize="10" fontWeight="700">/ 100</text>
       </svg>
       <div className="ra-score-label" style={{ color: c.text, background: c.bg }}>
         {c.label}
@@ -754,8 +798,8 @@ function RiskScoreRing({ score }) {
 }
 
 //  Main Component 
-export default function RiskAssessmentPage({ articles = [] }) {
-  const [step, setStep] = useState('profile');
+export default function RiskAssessmentPage({ articles = [], initialTab = 'profile' }) {
+  const [step, setStep] = useState(initialTab);
   const [profile, setProfile] = useState({ ...EMPTY_PROFILE });
   const [locations, setLocations] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -773,7 +817,7 @@ export default function RiskAssessmentPage({ articles = [] }) {
     const list = loadProfiles();
     setSavedProfiles(list);
     if (list.length > 0 && !profile.company_name) {
-      handleLoad(list[0]);
+      handleLoad(list[0], false); // false = don't reset tab on auto-load
     }
   }, []);
 
@@ -824,13 +868,13 @@ export default function RiskAssessmentPage({ articles = [] }) {
     setTimeout(() => setSaveStatus(''), 2500);
   };
 
-  const handleLoad = (rec) => {
+  const handleLoad = (rec, resetStep = true) => {
     setProfile(rec.profile);
     setLocations(rec.locations || []);
     setVendors(rec.vendors || []);
     setActiveProfileId(rec.id);
     setShowProfileList(false);
-    setStep('profile');
+    if (resetStep) setStep('profile');
   };
 
   const handleDelete = (id) => {
@@ -1109,13 +1153,12 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
 
         {/* ── Registered Office / HQ Address ── */}
         <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <h3 style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9ca3af', margin: 0 }}>
+          <div style={{ padding: '0 24px', display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6b7280', margin: 0 }}>
               Registered Office / HQ Address
             </h3>
           </div>
-          <div className="ra-fields-grid">
+          <div className="ra-fields-grid" style={{ paddingTop: 8 }}>
             <div className="ra-field">
               <label className="ra-label">Flat / Unit / Building No.</label>
               <input
@@ -1188,47 +1231,6 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
         </div>
       </div>
 
-      {/* ── Danger Zone: Delete Profile ── */}
-      <div className="ra-section-card ra-section-card--full" style={{ border: '1px solid #fecaca', background: '#fff5f5', padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flex: 1, minWidth: 280 }}>
-            <span className="ra-section-icon" style={{ background: '#ef4444', flexShrink: 0, marginTop: 2 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            </span>
-            <div>
-              <h2 className="ra-section-title" style={{ color: '#991b1b', marginBottom: 6, fontSize: 14 }}>Danger Zone</h2>
-              <strong style={{ fontSize: 13, color: '#7f1d1d', display: 'block', marginBottom: 4 }}>
-                {activeProfileId ? `Delete "${profile.company_name || 'Current Profile'}"` : 'Clear Profile Data'}
-              </strong>
-              <p style={{ fontSize: 12, color: '#991b1b', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
-                {activeProfileId
-                  ? 'This action cannot be undone. It will permanently delete the company profile along with all associated locations, vendors, and IT controls from the system.'
-                  : 'This will reset all unsaved fields in the current draft to their default empty states.'}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (activeProfileId) {
-                handleDelete(activeProfileId);
-              } else {
-                if (window.confirm("Are you sure you want to reset all fields in this profile draft?")) {
-                  setP('company_name', ''); setP('industry', ''); setP('hq_country', ''); setP('hq_city', ''); setP('num_employees', ''); setP('annual_revenue', ''); setP('hq_address_line1', ''); setP('hq_address_line2', ''); setP('hq_area', ''); setP('hq_state', ''); setP('hq_pincode', ''); setP('hq_lat', ''); setP('hq_lng', ''); setP('target_hazards', []);
-                }
-              }
-            }}
-            style={{
-              background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: 8,
-              fontSize: 11, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-              boxShadow: '0 2px 8px rgba(220,38,38,0.25)', transition: 'background 0.2s'
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            {activeProfileId ? 'Delete Saved Profile' : 'Reset Form Draft'}
-          </button>
-        </div>
-      </div>
 
       <div className="ra-section-card ra-section-card--full">
         <div className="ra-section-header">

@@ -879,7 +879,14 @@ function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = 
         attributionControl={false}
         className="z-0"
       >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          attribution="Tiles &copy; Esri"
+        />
+        <TileLayer
+          url="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+          opacity={1}
+        />
         <MiniMapAutoFit markers={allPoints} />
 
         {/* Company Sites */}
@@ -1163,6 +1170,8 @@ function AppMain() {
   const [radius, setRadius] = useState(0);
   const [expandedZones, setExpandedZones] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
+  const [riskAssessmentInitialTab, setRiskAssessmentInitialTab] = useState('profile');
+  const [riskAssessmentKey, setRiskAssessmentKey] = useState(0);
   const [dashboardView, setDashboardView] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [ledgerFilter, setLedgerFilter] = useState('ALL');
@@ -1220,19 +1229,39 @@ function AppMain() {
     if (!targetProfile) return;
     const { profile, locations = [], vendors = [] } = targetProfile;
 
-    // 1. Unique Countries
-    const countries = new Set();
-    if (profile.hq_country) countries.add(profile.hq_country.trim().toLowerCase());
-    locations.forEach(l => { if (l.country) countries.add(l.country.trim().toLowerCase()); });
-    vendors.forEach(v => { if (v.vendor_country) countries.add(v.vendor_country.trim().toLowerCase()); });
-
-    const matchedLocs = [];
-    countries.forEach(cName => {
-      const match = ENHANCED_COUNTRIES.find(c => c.name.toLowerCase() === cName);
-      if (match) {
-        const cleanWikiName = match.wikiName || match.name.split(' (')[0].trim();
-        matchedLocs.push({ label: match.name, code: match.code, uri: match.uri || `http://en.wikipedia.org/wiki/${cleanWikiName.replace(/ /g, '_')}` });
+    // 1. Unique Countries - KEEP exact original strings as entered in the company profile
+    const rawCountries = [];
+    const seenCountries = new Set();
+    const addCountry = (c) => {
+      if (!c) return;
+      const clean = c.trim();
+      const lower = clean.toLowerCase();
+      if (!seenCountries.has(lower)) {
+        seenCountries.add(lower);
+        rawCountries.push(clean);
       }
+    };
+
+    if (profile.hq_country) addCountry(profile.hq_country);
+    locations.forEach(l => { if (l.country) addCountry(l.country); });
+    vendors.forEach(v => { if (v.vendor_country) addCountry(v.vendor_country); });
+
+    const matchedLocs = rawCountries.map(cName => {
+      const lower = cName.toLowerCase();
+      const match = ENHANCED_COUNTRIES.find(c => {
+        const cLower = c.name.toLowerCase();
+        return cLower === lower ||
+          (lower === 'united states' || lower === 'usa' || lower === 'us' ? cLower.includes('united states') : false) ||
+          (lower === 'uk' || lower === 'united kingdom' ? cLower.includes('united kingdom') : false) ||
+          (lower === 'uae' ? cLower.includes('united arab emirates') : false) ||
+          cLower.includes(lower);
+      });
+      const wikiName = match ? (match.wikiName || match.name.split(' (')[0].trim()) : cName.replace(/ /g, '_');
+      return {
+        label: cName, // Exact original name from company profile
+        code: match ? match.code : cName.slice(0, 2).toUpperCase(),
+        uri: match?.uri || `http://en.wikipedia.org/wiki/${encodeURIComponent(wikiName.replace(/ /g, '_'))}`
+      };
     });
 
     // 2. Unique Cities/Locations for Target Zones
@@ -1521,24 +1550,12 @@ function AppMain() {
         }
       }
 
-      // 3. Keywords / Hazards mapping to conceptUri where available, fallback to keyword
+      // 3. Keywords / Hazards mapping (compact 1-to-1 to prevent hitting EventRegistry 15-keyword limit)
       if (keywords.length > 0) {
-        const keywordParts = [];
-        const seenUris = new Set();
-        keywords.forEach(kw => {
+        const keywordParts = keywords.slice(0, 8).map(kw => {
           const normalized = kw.toLowerCase().trim();
           const conceptUri = HAZARD_CONCEPT_URIS[normalized];
-          if (conceptUri) {
-            const expanded = CONCEPT_EXPANSIONS[conceptUri] || [conceptUri];
-            expanded.forEach(uri => {
-              if (!seenUris.has(uri)) {
-                seenUris.add(uri);
-                keywordParts.push({ "conceptUri": uri });
-              }
-            });
-          }
-          // Always include literal keyword text so body matches aren't missed
-          keywordParts.push({ "keyword": kw });
+          return conceptUri ? { "conceptUri": conceptUri } : { "keyword": kw };
         });
         if (keywordParts.length === 1) {
           queryParts.push(keywordParts[0]);
@@ -1549,17 +1566,21 @@ function AppMain() {
 
       // 3. Locations mapping using conceptUri
       if (params.cities.length) {
-        queryParts.push({ "$or": params.cities.map(c => ({ "conceptUri": c.uri })) });
+        queryParts.push({ "$or": params.cities.slice(0, 5).map(c => ({ "conceptUri": c.uri })) });
       } else if (params.states.length) {
-        queryParts.push({ "$or": params.states.map(s => ({ "conceptUri": s.uri })) });
+        queryParts.push({ "$or": params.states.slice(0, 5).map(s => ({ "conceptUri": s.uri })) });
       } else if (params.locs.length) {
-        queryParts.push({ "$or": params.locs.map(l => ({ "conceptUri": l.uri })) });
+        queryParts.push({ "$or": params.locs.slice(0, 6).map(l => ({ "conceptUri": l.uri })) });
       }
 
       // 3b. Local Target Zones filter (e.g. Dadar)
-      if (activeZones.length > 0) {
-        const zoneParts = activeZones.map(z => ({ "keyword": z }));
-        queryParts.push({ "$or": zoneParts });
+      // When broad countries are filtering, do not restrict article text strictly to individual city keywords unless radius is active or no countries exist
+      if (activeZones.length > 0 && (radius > 0 || !params.locs.length)) {
+        const cleanZones = activeZones.map(z => z.replace(/[!?,;]+$/, '').trim()).filter(Boolean);
+        if (cleanZones.length > 0) {
+          const zoneParts = cleanZones.map(z => ({ "keyword": z }));
+          queryParts.push({ "$or": zoneParts });
+        }
       }
 
       // 4. Categories mapping
@@ -1610,6 +1631,10 @@ function AppMain() {
             });
             if (res.ok) {
               const data = await res.json();
+              if (data?.error) {
+                console.error("NewsAPI Error:", data.error);
+                throw new Error(data.error);
+              }
               // Client-side safety net: strip any non-English articles that slip through
               if (data?.articles?.results) {
                 data.articles.results = data.articles.results.filter(
@@ -2021,6 +2046,9 @@ function AppMain() {
     } catch (e) {
       console.error("ANALYSIS_CRASH:", e);
       addLog('ERROR', 'Analysis Failed', e.message);
+      setError(e.message === 'NO ARTICLES FOUND'
+        ? 'No articles found matching all combined filters. Try clearing Target Zones or broadening your hazard keywords.'
+        : (e.message || 'Analysis failed. Please check your query or API configuration.'));
     } finally { setLoading(false); }
   };
 
@@ -2093,7 +2121,7 @@ function AppMain() {
           />
         )}
         {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} />}
-        {activePage === 'risk-assessment' && <RiskAssessmentPage articles={articles} />}
+        {activePage === 'risk-assessment' && <RiskAssessmentPage key={riskAssessmentKey} articles={articles} initialTab={riskAssessmentInitialTab} />}
         {activePage === 'earthquake-response' && <EarthquakeResponsePage activeArticle={activeArticle} onNavigate={setActivePage} />}
         {activePage === 'system-logs' && (
           <SystemLogsPage
@@ -2192,7 +2220,7 @@ function AppMain() {
 
                 {/* 2. Organization Risk Index (Replaces Intel Reports) */}
                 <button 
-                  onClick={() => setActivePage('risk-assessment')}
+                  onClick={() => { setRiskAssessmentInitialTab('summary'); setRiskAssessmentKey(k => k + 1); setActivePage('risk-assessment'); }}
                   className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-amber-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
                 >
                   <div 
