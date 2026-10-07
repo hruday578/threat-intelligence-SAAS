@@ -957,7 +957,6 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
       {/*  Header  */}
       <div className="ra-header">
         <div className="ra-header-left">
-          <div className="ra-header-icon"></div>
           <div>
             <h1 className="ra-header-title">Risk Assessment</h1>
             <p className="ra-header-sub">
