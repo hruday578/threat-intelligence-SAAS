@@ -2816,16 +2816,6 @@ function AppMain() {
                           {(!src.ai?.classification && (keyPrefix === 'gov-nat' || keyPrefix === 'gov-int')) ? (
                             <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100">GOV SOURCE</span>
                           ) : null}
-                          {src._duplicates?.length > 0 && (
-                            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200" title="Consolidated duplicates preserving provenance">
-                              +{src._duplicates.length} dups
-                            </span>
-                          )}
-                          {src._nearDuplicateCandidate && (
-                            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200" title="Near-duplicate candidate (preserved for independent coverage)">
-                              Near-Dup Review
-                            </span>
-                          )}
                           {src.date && <span className="text-[10px] font-bold text-gray-400">{src.date}</span>}
                         </div>
                         <h4 className={`text-[11px] font-bold ${titleColorCls} leading-snug line-clamp-2`}>{src.title}</h4>
