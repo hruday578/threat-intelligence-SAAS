@@ -38,6 +38,21 @@ export const TOP_SOURCES = [
   { label: '🌍 Arab News',            uri: 'arabnews.com' },
   { label: '🌍 The National (UAE)',    uri: 'thenationalnews.com' },
 
+  // ── Cybersecurity & Infrastructure Agencies ──────────────────────────────
+  { label: '🛡️ CISA USA (Cyber & Infrastructure)', uri: 'cisa.gov' },
+  { label: '🛡️ CERT-In India (Cyber Emergency Response)', uri: 'cert-in.org.in' },
+  { label: '🛡️ NCSC UK (National Cyber Security)',  uri: 'ncsc.gov.uk' },
+  { label: '🛡️ ENISA EU (Cybersecurity Agency)',    uri: 'enisa.europa.eu' },
+  { label: '🛡️ ACSC Australia (Cyber Security)',    uri: 'cyber.gov.au' },
+  { label: '🛡️ CCCS Canada (Cyber Security Centre)', uri: 'cyber.gc.ca' },
+
+  // ── Cyber Threat & Breach Intelligence ──────────────────────────────────────
+  { label: '⚡ BleepingComputer (Ransomware & Breaches)', uri: 'bleepingcomputer.com' },
+  { label: '⚡ The Hacker News (Cyber Attacks & Zero-Days)', uri: 'thehackernews.com' },
+  { label: '⚡ Dark Reading (Cyber Threats & InfoSec)', uri: 'darkreading.com' },
+  { label: '⚡ SecurityWeek (Industrial & Cyber Threats)', uri: 'securityweek.com' },
+  { label: '⚡ The Register (IT, Outages & Security)', uri: 'theregister.com' },
+
   // ── Government Alert & Emergency Sites ──────────────────────────────────────
   { label: '🏛️ NDMA India (Disaster Management)', uri: 'ndma.gov.in' },
   { label: '🏛️ IMD India (Weather Alerts)',     uri: 'imd.gov.in' },
@@ -51,3 +66,4 @@ export const TOP_SOURCES = [
   { label: '🏛️ WHO (Global Health Alerts)',     uri: 'who.int' },
   { label: '🏛️ GDACS (Global Disaster Alerts)',  uri: 'gdacs.org' },
 ];
+

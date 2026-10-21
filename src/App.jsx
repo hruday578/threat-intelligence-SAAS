@@ -19,6 +19,11 @@ import { TOP_SOURCES } from './data/sources';
 import { useAuth } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import { supabase } from './lib/supabase';
+import { deduplicateArticles } from './services/deduplication';
+import { validateNewsApiKey, buildEventRegistryPayload, fetchEventRegistryArticles } from './services/newsIngestion';
+import { buildUnifiedSearchPlan } from './services/searchPlanner';
+import { classifySingleArticle } from './services/articleClassifier';
+import { correlateArticlesIntoEvents } from './services/eventCorrelation';
 
 //  Operational Constants 
 const TACTICAL_LIBRARY = [
@@ -83,7 +88,11 @@ const HAZARD_CONCEPT_URIS = {
   'civil unrest': 'http://en.wikipedia.org/wiki/Civil_unrest',
   'riot': 'http://en.wikipedia.org/wiki/Riot',
   'protest': 'http://en.wikipedia.org/wiki/Protest',
-  'active shooter': 'http://en.wikipedia.org/wiki/Active_shooter',
+  'supply chain disruption': 'http://en.wikipedia.org/wiki/Supply_chain',
+  'supply chain': 'http://en.wikipedia.org/wiki/Supply_chain',
+  'geopolitical conflict': 'http://en.wikipedia.org/wiki/Geopolitics',
+  'geopolitics': 'http://en.wikipedia.org/wiki/Geopolitics',
+  'cyberattack': 'http://en.wikipedia.org/wiki/Cyberattack',
   'kidnapping': 'http://en.wikipedia.org/wiki/Kidnapping',
   'assassination': 'http://en.wikipedia.org/wiki/Assassination',
 };
@@ -349,6 +358,7 @@ const DURATIONS = [
   { label: '30D', value: '30d', days: 30 }
 ];
 const PROVIDERS = [
+  { id: 'groq-8b', label: 'GROQ 8B ULTRA FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
   { id: 'groq-20b', label: 'GROQ 20B FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-20b' },
   { id: 'groq-120b', label: 'GROQ 120B', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b' },
   { id: 'groq-compound', label: 'GROQ COMPOUND', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'groq/compound' },
@@ -503,7 +513,7 @@ const isGovernmentSource = (sourceObj) => {
   // Standard government domains
   if (/\.gov(\.[a-z]{2})?$/.test(domain)) return true;
   // Known non-.gov international bodies or government entities
-  const govDomains = ['who.int', 'gdacs.org'];
+  const govDomains = ['who.int', 'gdacs.org', 'cert-in.org.in', 'enisa.europa.eu'];
   return govDomains.some(gd => domainMatch(domain, gd));
 };
 
@@ -1104,10 +1114,10 @@ function getRiskScoreMeta(s) {
 
 function AppMain() {
   const { user, session, organization, member, loading: authLoading, signOut } = useAuth();
-  const [configExpanded, setConfigExpanded] = useState(false);
-  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '8745555f-c1dc-4dd7-a57d-9e664d846c3e');
-  const [aiKey, setAiKey] = useState('');
-  const [provider, setProvider] = useState('groq-120b');
+  const [configExpanded, setConfigExpanded] = useState(true);
+  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '');
+  const [aiKey, setAiKey] = useState(() => import.meta.env.VITE_GROQ_API_KEY || '');
+  const [provider, setProvider] = useState('groq-8b');
   const [keywords, setKeywords] = useState([]);
   const [zonesInput, setZonesInput] = useState('');
   const [params, setParams] = useState({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] });
@@ -1115,6 +1125,7 @@ function AppMain() {
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState([]);
   const [rawArticles, setRawArticles] = useState([]);
+  const [dedupStats, setDedupStats] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [error, setErrorState] = useState('');
   const [systemLogs, setSystemLogs] = useState(() => {
@@ -1465,7 +1476,8 @@ function AppMain() {
   }, [autoPilot, autoPilotInterval, user]);
 
   const handleExecute = async (isAuto = false) => {
-    if (!newsKey) return setError('Configuration Incomplete');
+    const keyValidation = validateNewsApiKey(newsKey);
+    if (!keyValidation.valid) return setError(keyValidation.error);
     if (!keywords.length && !params.concepts.length && !params.locs.length && !params.cats.length) return setError('Add at least one keyword, concept, or location');
     
     const activeProviderObj = PROVIDERS.find(p => p.id === provider);
@@ -1525,14 +1537,26 @@ function AppMain() {
     setError('');
 
     try {
-      const dateStart = new Date(Date.now() - (DURATIONS.find(d => d.value === params.dur)?.days || 1) * 86400000).toISOString().split('T')[0];
-      // Set dateEnd to tomorrow's UTC date to guarantee today's articles are never excluded due to timezone offset
-      const dateEnd = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      // ── BUILD UNIFIED SEARCH PLAN (Company + Locations + Vendors + Explorer Context) ──
+      const unifiedPlan = buildUnifiedSearchPlan({
+        profile: currentProfile?.profile || {},
+        locations: currentProfile?.locations || [],
+        vendors: currentProfile?.vendors || [],
+        userConcepts: params.concepts,
+        userSources: params.prefSrc,
+        duration: params.dur,
+        sortBy: sortBy,
+        radius,
+        targetZones: zonesInput
+      });
 
-      // 1. Bounded Date Filter
-      const queryParts = [{ "dateStart": dateStart, "dateEnd": dateEnd }];
+      addLog('ANALYSIS', 'Unified Search Plan Generated', 
+        `Synthesized ${unifiedPlan.summary.totalThreatCriteria} threat criteria across ${unifiedPlan.summary.locationsCovered} locations & ${unifiedPlan.summary.vendorsMonitored} vendors into ${unifiedPlan.summary.subQueriesCount} queries.`,
+        { planId: unifiedPlan.planId, summary: unifiedPlan.summary, provenanceSample: unifiedPlan.queryProvenance.slice(0, 6) }
+      );
 
-      // 2. Concepts filter (broad umbrella topics from dropdown)
+      // 1. Concepts filter (broad umbrella topics from dropdown)
+      const queryConditions = [];
       if (params.concepts.length > 0) {
         let conceptUris = [...new Set(params.concepts.flatMap(c => CONCEPT_EXPANSIONS[c.uri] || [c.uri]))];
         
@@ -1544,13 +1568,13 @@ function AppMain() {
 
         const conceptParts = conceptUris.map(uri => ({ "conceptUri": uri }));
         if (conceptParts.length === 1) {
-          queryParts.push(conceptParts[0]);
+          queryConditions.push(conceptParts[0]);
         } else {
-          queryParts.push({ "$or": conceptParts });
+          queryConditions.push({ "$or": conceptParts });
         }
       }
 
-      // 3. Keywords / Hazards mapping (compact 1-to-1 to prevent hitting EventRegistry 15-keyword limit)
+      // 2. Keywords / Hazards mapping using conceptUri
       if (keywords.length > 0) {
         const keywordParts = keywords.slice(0, 8).map(kw => {
           const normalized = kw.toLowerCase().trim();
@@ -1558,105 +1582,142 @@ function AppMain() {
           return conceptUri ? { "conceptUri": conceptUri } : { "keyword": kw };
         });
         if (keywordParts.length === 1) {
-          queryParts.push(keywordParts[0]);
+          queryConditions.push(keywordParts[0]);
         } else {
-          queryParts.push({ "$or": keywordParts });
+          queryConditions.push({ "$or": keywordParts });
         }
       }
 
       // 3. Locations mapping using conceptUri
       if (params.cities.length) {
-        queryParts.push({ "$or": params.cities.slice(0, 5).map(c => ({ "conceptUri": c.uri })) });
+        queryConditions.push({ "$or": params.cities.slice(0, 5).map(c => ({ "conceptUri": c.uri })) });
       } else if (params.states.length) {
-        queryParts.push({ "$or": params.states.slice(0, 5).map(s => ({ "conceptUri": s.uri })) });
+        queryConditions.push({ "$or": params.states.slice(0, 5).map(s => ({ "conceptUri": s.uri })) });
       } else if (params.locs.length) {
-        queryParts.push({ "$or": params.locs.slice(0, 6).map(l => ({ "conceptUri": l.uri })) });
+        queryConditions.push({ "$or": params.locs.slice(0, 6).map(l => ({ "conceptUri": l.uri })) });
       }
 
       // 3b. Local Target Zones filter (e.g. Dadar)
-      // When broad countries are filtering, do not restrict article text strictly to individual city keywords unless radius is active or no countries exist
       if (activeZones.length > 0 && (radius > 0 || !params.locs.length)) {
         const cleanZones = activeZones.map(z => z.replace(/[!?,;]+$/, '').trim()).filter(Boolean);
         if (cleanZones.length > 0) {
           const zoneParts = cleanZones.map(z => ({ "keyword": z }));
-          queryParts.push({ "$or": zoneParts });
+          queryConditions.push({ "$or": zoneParts });
         }
       }
 
       // 4. Categories mapping
       if (params.cats.length) {
-        queryParts.push({ "$or": params.cats.map(c => ({ "categoryUri": c.uri })) });
+        queryConditions.push({ "$or": params.cats.map(c => ({ "categoryUri": c.uri })) });
       }
 
       // 5. Add expanded radius zone cities as conceptUri conditions
       if (expandedZoneKeywords.length > activeZones.length) {
         const radiusCities = expandedZoneKeywords.filter(z => !activeZones.includes(z));
         if (radiusCities.length > 0) {
-          queryParts.push({ "$or": radiusCities.map(city => ({ "conceptUri": `http://en.wikipedia.org/wiki/${city.replace(/ /g, '_')}` })) });
+          queryConditions.push({ "$or": radiusCities.map(city => ({ "conceptUri": `http://en.wikipedia.org/wiki/${city.replace(/ /g, '_')}` })) });
         }
       }
 
+      const queryParts = queryConditions;
 
+      // SINGLE-PAGE FETCH LOGIC - Exactly matches sandbox structure
+      const fetchNews = async (qParts, count = 100, maxPages = 1) => {
+        let currentPage = 1;
+        let totalPages = 1;
+        let allArticles = [];
+        let lastResponseData = null;
 
-      // TACTICAL DUAL FETCH LOGIC
-      const fetchNews = async (qParts, count) => {
-        let res;
-        for (let attempts = 0; attempts < 2; attempts++) {
-          try {
-            // lang MUST be inside $query.$and — $filter does NOT support lang in EventRegistry AQL
-            const allConditions = [{ "lang": "eng" }, ...qParts];
+        while (currentPage <= totalPages && currentPage <= maxPages) {
+          let pageSucceeded = false;
+          for (let attempts = 0; attempts < 2; attempts++) {
+            try {
+              // Exact sandbox structure: query contains $query.$and (with $or arrays and lang: "eng") and $filter.forceMaxDataTimeWindow
+              const durationDays = DURATIONS.find(d => d.value === params.dur)?.days || 31;
+              const allConditions = [...qParts, { "lang": "eng" }];
 
-            const queryBlock = {
-              "$query": allConditions.length === 1
-                ? allConditions[0]
-                : { "$and": allConditions }
-            };
+              const queryBlock = {
+                "$query": allConditions.length === 1
+                  ? allConditions[0]
+                  : { "$and": allConditions },
+                "$filter": {
+                  "forceMaxDataTimeWindow": String(durationDays)
+                }
+              };
 
-            const body = {
-              apiKey: newsKey,
-              action: "getArticles",
-              articlesCount: count,
-              articlesSortBy: sortBy,
-              articlesSortByAsc: false, // Ensures newest (latest/today's) articles come first
-              resultType: "articles",
-              dataType: ["news"],
-              articleBodyLen: 1000,
-              keywordSearchMode: "simple",
-              query: queryBlock
-            };
-            console.log("AlertEm NewsAPI Request:", JSON.stringify(body, null, 2));
-            res = await fetch(`/news-proxy`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data?.error) {
-                console.error("NewsAPI Error:", data.error);
-                throw new Error(data.error);
+              const body = {
+                apiKey: newsKey,
+                action: "getArticles",
+                articlesPage: 1,
+                articlesCount: count || 100,
+                articlesSortBy: sortBy || "rel",
+                resultType: "articles",
+                articleBodyLen: 300,
+                includeArticleImage: true,
+                includeArticleShares: true,
+                includeArticlesSentiment: true,
+                includeArticleConcepts: true,
+                includeArticleCategories: true,
+                includeArticleLocation: true,
+                includeArticleVideos: true,
+                includeArticleLinks: true,
+                includeSourceLocation: true,
+                articlesConceptLang: "eng",
+                query: queryBlock
+              };
+              console.log(`AlertEm NewsAPI Sandbox-Matched Request:`, JSON.stringify(body, null, 2));
+              const res = await fetch(`/news-proxy`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.error) {
+                  console.error("NewsAPI Error:", data.error);
+                  throw new Error(data.error);
+                }
+                lastResponseData = data;
+                let pageArticles = data?.articles?.results || [];
+                // Client-side safety net: strip any non-English articles that slip through
+                pageArticles = pageArticles.filter(a => !a.lang || a.lang === 'eng');
+                allArticles.push(...pageArticles);
+
+                totalPages = data?.articles?.pages || 1;
+                console.log(`[NewsAPI Page ${currentPage}] Got ${pageArticles.length} articles. Total pages: ${totalPages}`);
+                pageSucceeded = true;
+                break;
+              } else {
+                let errDetail = `HTTP ${res.status}`;
+                try {
+                  const errBody = await res.json();
+                  if (errBody?.error) errDetail = errBody.error;
+                } catch (_) {}
+                throw new Error(errDetail);
               }
-              // Client-side safety net: strip any non-English articles that slip through
-              if (data?.articles?.results) {
-                data.articles.results = data.articles.results.filter(
-                  a => !a.lang || a.lang === 'eng'
-                );
+            } catch (e) {
+              console.warn(`[NewsAPI Page ${currentPage} Attempt ${attempts + 1} Failed]:`, e.message);
+              if (attempts === 1) {
+                // If 1st page failed completely, abort; if subsequent page failed, return what we accumulated
+                if (currentPage === 1) throw new Error(e.message || `Unable to reach News API. Please check network connection.`);
+                console.warn(`Failed fetching page ${currentPage}, stopping pagination and returning ${allArticles.length} articles.`);
+                break;
               }
-              return data;
-            } else {
-              let errDetail = `HTTP ${res.status}`;
-              try {
-                const errBody = await res.json();
-                if (errBody?.error) errDetail = errBody.error;
-              } catch (_) {}
-              throw new Error(errDetail);
+              await new Promise(r => setTimeout(r, 1500));
             }
-          } catch (e) {
-            console.warn(`[NewsAPI Attempt ${attempts + 1} Failed]:`, e.message);
-            if (attempts === 1) throw new Error(e.message || `Unable to reach News API. Please check network connection.`);
-            await new Promise(r => setTimeout(r, 1500));
           }
+
+          if (!pageSucceeded) break;
+          if (currentPage >= totalPages) break;
+          currentPage++;
         }
-        throw new Error(`Unable to fetch articles from News API.`);
+
+        return {
+          articles: {
+            results: allArticles,
+            totalResults: lastResponseData?.articles?.totalResults || allArticles.length,
+            pages: totalPages
+          }
+        };
       };
 
       let raw = [];
@@ -1704,78 +1765,71 @@ function AppMain() {
 
       if (!raw.length) throw new Error('NO ARTICLES FOUND');
 
-      // ── PARALLEL GOVERNMENT NEWS FETCH ───────────────────────────────────────
-      // Fetch from who.int (only indexed gov source in sandbox) using same keywords.
-      // We do this regardless of preferred source selection so gov panel is always populated.
-      (() => {
-        const GOV_SOURCES_INDEXED = ['who.int'];
-        // Also include any user-selected gov sources that might have articles
-        const userGovSrcs = (params.prefSrc || []).filter(s => isGovernmentSource(s));
-        const allGovUris = [...new Set([...GOV_SOURCES_INDEXED, ...userGovSrcs.map(s => s.uri)])];
+      // ── CONSERVATIVE AertEM DEDUPLICATION PIPELINE ─────────────────────────
+      // Run the Colab conservative deduplication model before sending articles to LLM:
+      // 1. Canonical URL matching
+      // 2. Exact normalized text matching
+      // 3. Similarity-based near-duplicate candidate detection (threshold = 0.82)
+      // 4. Preserve independent coverage & review candidates
+      const dedupResult = deduplicateArticles(raw, { nearDuplicateThreshold: 0.82 });
+      setDedupStats(dedupResult.stats);
 
-        // Build keyword-based query for gov fetch (no conceptUri — broader match)
-        const govKeywordParts = [
-          ...keywords.map(kw => ({ keyword: kw })),
-          ...params.concepts.map(c => ({ conceptUri: c.uri }))
-        ];
-        const govQueryParts = [
-          { dateStart: new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0], dateEnd: new Date().toISOString().split('T')[0] },
-          { '$or': allGovUris.map(uri => ({ sourceUri: uri })) }
-        ];
-        // If we have keywords, add them as OR filter
-        if (govKeywordParts.length > 0) {
-          govQueryParts.push({ '$or': govKeywordParts });
+      console.log(`[AertEM Deduplication] Processed ${raw.length} raw articles: ` +
+        `${dedupResult.uniqueArticles.length} unique, ` +
+        `${dedupResult.exactDuplicates.length} exact duplicates excluded from LLM, ` +
+        `${dedupResult.nearDuplicateCandidates.length} near-duplicate candidates preserved for review.`
+      );
+
+      // Audit log the deduplication run in system logs
+      addLog('ANALYSIS', 'AertEM Deduplication Applied', 
+        `Deduplicated ${raw.length} raw articles: ${dedupResult.uniqueArticles.length} unique, ${dedupResult.exactDuplicates.length} exact duplicates, ${dedupResult.nearDuplicateCandidates.length} near-duplicate review candidates.`,
+        {
+          totalRaw: raw.length,
+          uniqueCount: dedupResult.uniqueArticles.length,
+          exactDuplicatesCount: dedupResult.exactDuplicates.length,
+          nearDuplicatesCount: dedupResult.nearDuplicateCandidates.length,
+          auditSample: dedupResult.duplicateAuditRecords.slice(0, 5)
         }
+      );
 
-        fetchNews(govQueryParts, 20)
-          .then(govRes => {
-            const govRaw = (govRes?.articles?.results || []).filter(a => !a.lang || a.lang === 'eng');
-            console.log(`[Gov Fetch] who.int + selected gov sources → ${govRaw.length} articles`);
-            if (govRaw.length > 0) {
-              setGovArticles(govRaw);
-            }
-          })
-          .catch(e => console.warn('[Gov Fetch] silent fail:', e.message));
-      })();
-      // ─────────────────────────────────────────────────────────────────────────
-
-      const seen = new Set();
-      let uniqueRaw = raw.filter(art => {
-        const key = art.title.toLowerCase().trim();
-        if (seen.has(key) || seenTitlesRef.current.has(key)) return false;
-        seen.add(key);
+      // Filter against seenTitlesRef from previous auto-pilot runs if any
+      const uniqueRaw = dedupResult.uniqueArticles.filter(art => {
+        const key = (art.title || '').toLowerCase().trim();
+        if (seenTitlesRef.current.has(key)) return false;
         seenTitlesRef.current.add(key);
         return true;
       });
-
-      // (Removed strict client-side keyword filter to rely on NewsAPI's deeper body search)
 
       if (!uniqueRaw.length) {
         setLoading(false);
         return;
       }
 
-      // Limit max raw articles for fast AI response (top 70 articles)
-      const targetRaw = uniqueRaw.slice(0, 70);
+      // Process all unique articles from the 100-article query
+      const targetRaw = uniqueRaw;
 
-      const processed = [];
-      const activeProvider = PROVIDERS.find(p => p.id === provider);
+      const activeProvider = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
       const locationContext = [...params.cities, ...params.states, ...params.locs].map(l => l.label).join(', ') || 'Global';
 
-      // Neural Batch Processing with Token-Guard & Live Progress
-      const chunkSize = 7;
-      const totalBatches = Math.ceil(targetRaw.length / chunkSize);
-
+      // High-Throughput Batch Processing with Parallel Execution (Chunk size: 12)
+      const chunkSize = 12;
+      const chunks = [];
       for (let i = 0; i < targetRaw.length; i += chunkSize) {
-        const chunk = targetRaw.slice(i, i + chunkSize);
+        chunks.push(targetRaw.slice(i, i + chunkSize));
+      }
 
+      // Process batches concurrently for 3x-4x speedup
+      const batchPromises = chunks.map(async (chunk, batchIndex) => {
         try {
-          await new Promise(r => setTimeout(r, 500)); // Smooth throttle
-
-          const payload = chunk.map((a, idx) => ({ id: idx, title: a.title, body: (a.body || '').slice(0, 1000), article_date: a.dateTime || a.date || '' }));
+          const payload = chunk.map((a, idx) => ({ 
+            id: idx, 
+            title: a.title, 
+            body: (a.body || '').slice(0, 750), 
+            article_date: a.dateTime || a.date || '' 
+          }));
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 25000);
+          const timeoutId = setTimeout(() => controller.abort(), 20000);
           let aiRes;
 
           let apiProviderName = 'groq';
@@ -1807,9 +1861,8 @@ function AppMain() {
             const msg = errData.error?.message || aiRes.statusText;
             if (aiRes.status === 429) {
               setError("DAILY AI LIMIT REACHED. SWITCH PROVIDER OR WAIT 24H.");
-              break;
             }
-            console.warn(`Batch ${currentBatch} AI error: ${msg}. Using defaults.`);
+            console.warn(`Batch ${batchIndex + 1} AI error: ${msg}. Using defaults.`);
           }
 
           const aiData = aiRes.ok ? await aiRes.json() : null;
@@ -1832,7 +1885,6 @@ function AppMain() {
           }
 
           // ── Stage 3: Collect individual {...} objects as array fallback ────────
-          // Handles: single object, truncated arrays, or objects without wrapping []
           if (!jsonStr) {
             const objectMatches = [];
             let depth = 0, start = -1;
@@ -1854,27 +1906,18 @@ function AppMain() {
           }
 
           // ── Stage 4: Parse with progressive repair, fallback to defaults ─────
-          let aiJsonArray;
-          if (!jsonStr) {
-            // Nothing extractable — use defaults for every article in this chunk
-            console.warn("AI returned no parseable JSON. Using defaults for chunk. Raw:", rawContent.slice(0, 400));
-            aiJsonArray = [];
-          } else {
-            // Repair raw newlines inside string values
+          let aiJsonArray = [];
+          if (jsonStr) {
             jsonStr = repairJSONNewlines(jsonStr);
-            // Remove trailing commas before ] or }
             jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
 
             try {
               aiJsonArray = JSON.parse(jsonStr);
             } catch (parseErr) {
               try {
-                // Strip any residual markdown tags inside the block
                 const cleaned = jsonStr.replace(/```json|```/g, '').trim();
                 aiJsonArray = JSON.parse(cleaned);
-              } catch (secondErr) {
-                // Last resort: extract objects one-by-one
-                console.warn("Full JSON parse failed, falling back to object extraction.", parseErr.message);
+              } catch (_) {
                 const objectMatches = [];
                 let depth = 0, start = -1;
                 for (let i = 0; i < jsonStr.length; i++) {
@@ -1891,15 +1934,12 @@ function AppMain() {
                 }
                 if (objectMatches.length > 0) {
                   aiJsonArray = objectMatches;
-                } else {
-                  console.error("All JSON parsing strategies failed. Raw Output:", rawContent.slice(0, 400));
-                  aiJsonArray = []; // use defaults for chunk
                 }
               }
             }
           }
 
-          chunk.forEach((art, idx) => {
+          return chunk.map((art, idx) => {
             const aiJson = (Array.isArray(aiJsonArray) ? aiJsonArray.find(item => item && (item.id === idx || Number(item.id) === idx)) : null)
               || (aiJsonArray && aiJsonArray[idx])
               || { classification: 'INFORMATIVE', reasoning: 'Missing from batch — no operational event established.', mitigation: 'No immediate operational action indicated.', citizen_action: 'No immediate citizen action indicated.', urgency: 'NONE', hazard: 'General', region: locationContext, article_type: 'OTHER', operational_event: false, threat_status: 'NONE' };
@@ -1909,12 +1949,10 @@ function AppMain() {
               const fullText = ((art.title || '') + ' ' + (art.body || '') + ' ' + (aiJson.region || '') + ' ' + (aiJson.exact_location || '') + ' ' + (aiJson.reasoning || '')).toLowerCase();
               const targetTokens = locationContext.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
 
-              // Include active target zones (e.g. Pathanamthitta) in valid target tokens
               activeZones.forEach(z => {
                 if (z.length > 2) targetTokens.push(z.toLowerCase());
               });
 
-              // Include known cities/districts of the target state (e.g. Kerala cities)
               if (locationContext.toLowerCase().includes('kerala')) {
                 const KERALA_TOWNS = ['kerala', 'pathanamthitta', 'wayanad', 'kochi', 'cochin', 'trivandrum', 'thiruvananthapuram', 'kozhikode', 'calicut', 'thrissur', 'palakkad', 'kollam', 'alappuzha', 'alleppey', 'idukki', 'kottayam', 'malappuram', 'kannur', 'kasaragod', 'munnar', 'sabarimala', 'pamba', 'vythiri', 'meppadi', 'chooralmala', 'mundakkai', 'kuttanad', 'varkala', 'guruvayur'];
                 targetTokens.push(...KERALA_TOWNS);
@@ -1927,18 +1965,21 @@ function AppMain() {
               }
             }
 
-            masterProcessedRef.current.push({ ...art, ai: aiJson });
+            return { ...art, ai: aiJson };
           });
         } catch (e) {
           console.warn(`Batch processing exception: ${e.message}. Utilizing fallback defaults.`);
-          chunk.forEach((art) => {
-            masterProcessedRef.current.push({
-              ...art,
-              ai: { classification: 'INFORMATIVE', reasoning: 'AI batch processing fallback — no operational event established.', mitigation: 'No immediate operational action indicated.', citizen_action: 'No immediate citizen action indicated.', urgency: 'NONE', hazard: 'General', region: locationContext, article_type: 'OTHER', operational_event: false, threat_status: 'NONE' }
-            });
-          });
+          return chunk.map((art) => ({
+            ...art,
+            ai: { classification: 'INFORMATIVE', reasoning: 'AI batch processing fallback — no operational event established.', mitigation: 'No immediate operational action indicated.', citizen_action: 'No immediate citizen action indicated.', urgency: 'NONE', hazard: 'General', region: locationContext, article_type: 'OTHER', operational_event: false, threat_status: 'NONE' }
+          }));
         }
-      }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(processedChunk => {
+        masterProcessedRef.current.push(...processedChunk);
+      });
 
       // Consolidation Logic
       const groupedEvents = {};
@@ -2011,8 +2052,19 @@ function AppMain() {
 
       setRawArticles([...masterProcessedRef.current]);
 
+      // Correlate articles into shared event timelines & corroborate independent coverage
+      const correlatedEventList = correlateArticlesIntoEvents(masterProcessedRef.current);
+
       let finalEvents = Object.values(groupedEvents)
         .filter(a => a.ai.classification !== 'IRRELEVANT')
+        .map(ev => {
+          const matchingTimeline = correlatedEventList.find(ce => ce.hazard.toLowerCase() === (ev.ai?.hazard || '').toLowerCase());
+          return {
+            ...ev,
+            corroborationLevel: matchingTimeline?.corroborationLevel || 'SINGLE_SOURCE',
+            distinctPublishers: matchingTimeline?.distinctPublishers || [ev.source?.title || 'Unknown']
+          };
+        })
         .sort((a, b) => {
           if (sortBy === 'rel') return 0; // keep API relevance order
           if (sortBy === 'socialScore') {
@@ -2035,14 +2087,37 @@ function AppMain() {
       const infoNum = masterProcessedRef.current.filter(a => a.ai?.classification === 'INFORMATIVE').length;
       const irrelevantNum = masterProcessedRef.current.filter(a => a.ai?.classification === 'IRRELEVANT').length;
 
-      addLog('ANALYSIS', `Analysis Complete: ${alertsNum} Alerts Found`, `Analyzed ${totalAnalyzed} articles with ${activeProviderObj?.label || provider}: ${alertsNum} Alerts, ${infoNum} Info, ${irrelevantNum} Irrelevant`, {
+      addLog('ANALYSIS', `Analysis Complete: ${alertsNum} Alerts Found`, `Analyzed ${totalAnalyzed} unique articles (${dedupResult.exactDuplicates.length} duplicates pruned) with ${activeProviderObj?.label || provider}: ${alertsNum} Alerts, ${infoNum} Info, ${irrelevantNum} Irrelevant`, {
         ...querySummary,
         totalRaw: raw.length,
         totalAnalyzed: totalAnalyzed,
+        dedupStats: dedupResult.stats,
         alertsCount: alertsNum,
         infoCount: infoNum,
         irrelevantCount: irrelevantNum
       });
+
+      if (organization?.id) {
+        try {
+          await supabase.from('scan_history').insert([{
+            org_id: organization.id,
+            user_id: user?.id,
+            query_params: querySummary,
+            results_summary: {
+              totalRaw: raw.length,
+              totalAnalyzed,
+              alertsCount: alertsNum,
+              infoCount: infoNum,
+              dedupStats: dedupResult.stats
+            },
+            articles_count: totalAnalyzed,
+            alerts_count: alertsNum,
+            provider: activeProviderObj?.label || provider
+          }]);
+        } catch (dbErr) {
+          console.warn('[Scan History Sync] Non-blocking warning:', dbErr.message);
+        }
+      }
     } catch (e) {
       console.error("ANALYSIS_CRASH:", e);
       addLog('ERROR', 'Analysis Failed', e.message);
@@ -2118,10 +2193,19 @@ function AppMain() {
             autoPilotInterval={autoPilotInterval}
             targetZone={zonesInput}
             radius={radius}
+            companyLocations={currentProfile?.locations || []}
           />
         )}
         {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} />}
-        {activePage === 'risk-assessment' && <RiskAssessmentPage key={riskAssessmentKey} articles={articles} initialTab={riskAssessmentInitialTab} />}
+        {activePage === 'risk-assessment' && (
+          <RiskAssessmentPage
+            key={riskAssessmentKey}
+            articles={articles}
+            initialTab={riskAssessmentInitialTab}
+            provider={provider}
+            aiKey={aiKey}
+          />
+        )}
         {activePage === 'earthquake-response' && <EarthquakeResponsePage activeArticle={activeArticle} onNavigate={setActivePage} />}
         {activePage === 'system-logs' && (
           <SystemLogsPage
@@ -2171,49 +2255,65 @@ function AppMain() {
 
           {activePage === 'dashboard' && dashboardView === 'overview' ? (
             <div className="flex-1 p-8 bg-gray-50 flex flex-col overflow-auto">
-              <h1 className="text-lg font-black uppercase tracking-widest text-gray-900 mb-6">Dashboard Overview</h1>
+              <h1 className="text-lg font-black uppercase tracking-widest text-gray-900 mb-6">Threat Dashboard</h1>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
-                {/* 1. Active Threat Posture */}
+                {/* 1. Active Threat */}
                 <button 
                   onClick={() => setDashboardView('detailed')}
-                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-red-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                  className={`border rounded-3xl p-6 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
+                    alertsCount > 0 
+                      ? 'bg-red-50/50 border-red-200 shadow-sm hover:shadow-xl hover:border-red-300' 
+                      : 'bg-emerald-50/40 border-emerald-200/80 shadow-[0_8px_30px_rgb(16,185,129,0.06)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] hover:border-emerald-300'
+                  }`}
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-red-500/10 transition-all" />
+                  <div 
+                    className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl pointer-events-none transition-all ${
+                      alertsCount > 0 ? 'bg-red-500/10 group-hover:bg-red-500/20' : 'bg-emerald-500/10 group-hover:bg-emerald-500/20'
+                    }`} 
+                  />
                   
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${alertsCount > 0 ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${alertsCount > 0 ? 'bg-red-600' : 'bg-emerald-600'}`}></span>
                         </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Live Intel</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${alertsCount > 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                          Live Intel
+                        </span>
                       </div>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                        alertsCount > 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border font-semibold ${
+                        alertsCount > 0 ? 'bg-red-100/70 text-red-700 border-red-200' : 'bg-emerald-100/70 text-emerald-800 border-emerald-200'
                       }`}>
                         {alertsCount > 0 ? 'Active Threats' : 'Perimeter Clear'}
                       </span>
                     </div>
 
-                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-red-600 transition-colors">
-                      Active Threat Posture
+                    <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
+                      alertsCount > 0 ? 'text-red-950 group-hover:text-red-600' : 'text-emerald-950 group-hover:text-emerald-700'
+                    }`}>
+                      Active Threat
                     </h2>
-                    <p className="text-[11px] font-medium text-gray-400">
+                    <p className={`text-[11px] font-medium ${alertsCount > 0 ? 'text-red-600/70' : 'text-emerald-700/70'}`}>
                       {alertsCount > 0 ? `${alertsCount} critical threats requiring response` : 'No immediate critical threats detected'}
                     </p>
                   </div>
 
                   <div className="flex items-end justify-between mt-4">
                     <div>
-                      <span className="text-4xl font-black text-red-600 leading-none tracking-tight">{alertsCount}</span>
-                      <span className="text-xs font-bold text-gray-400 ml-2">Alerts</span>
+                      <span className={`text-4xl font-black leading-none tracking-tight ${alertsCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {alertsCount}
+                      </span>
+                      <span className={`text-xs font-bold ml-2 ${alertsCount > 0 ? 'text-red-400' : 'text-emerald-600/70'}`}>Alerts</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-red-600 transition-colors uppercase tracking-wider">
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                      alertsCount > 0 
+                        ? 'bg-red-600 text-white group-hover:bg-red-700 shadow-red-200' 
+                        : 'bg-emerald-600 text-white group-hover:bg-emerald-700 shadow-emerald-200'
+                    }`}>
                       <span>Investigate</span>
-                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-red-50 group-hover:text-red-600 transition-all">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                      </div>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </div>
                   </div>
                 </button>
@@ -2283,11 +2383,9 @@ function AppMain() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-amber-600 transition-colors uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white group-hover:bg-amber-600 transition-all shadow-sm shadow-amber-200">
                       <span>Assess</span>
-                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-all">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                      </div>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </div>
                   </div>
                 </button>
@@ -2346,11 +2444,9 @@ function AppMain() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-black text-gray-400 group-hover:text-blue-600 transition-colors uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white group-hover:bg-blue-700 transition-all shadow-sm shadow-blue-200">
                       <span>Manage Staff</span>
-                      <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                      </div>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </div>
                   </div>
                 </button>
@@ -2652,10 +2748,16 @@ function AppMain() {
                     });
                     prefList = uniquePref.map(s => ({ src: s, isCurrentEvent: false }));
 
-                    const otherSources = targetArticles.flatMap(a => a.sources.filter(s =>
+                    // In All Articles Mode: flow from rawArticles so all articles from the 100-article query are available
+                    const sourcePool = rawArticles.length > 0 ? rawArticles : targetArticles.flatMap(a => a.sources);
+
+                    const otherSources = (ledgerFilter === 'ALL'
+                      ? sourcePool
+                      : sourcePool.filter(s => (s.ai?.classification || 'INFORMATIVE') === ledgerFilter)
+                    ).filter(s =>
                       !isGovernmentSource(s.source) &&
                       !params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri))
-                    ));
+                    );
                     const seenOther = new Set();
                     const uniqueOther = [];
                     otherSources.forEach(s => {
@@ -2714,8 +2816,15 @@ function AppMain() {
                           {(!src.ai?.classification && (keyPrefix === 'gov-nat' || keyPrefix === 'gov-int')) ? (
                             <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100">GOV SOURCE</span>
                           ) : null}
-                          {isCurrentEvent && (
-                            <span className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-1.5 py-0.5 rounded-md shadow-sm">This Alert</span>
+                          {src._duplicates?.length > 0 && (
+                            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200" title="Consolidated duplicates preserving provenance">
+                              +{src._duplicates.length} dups
+                            </span>
+                          )}
+                          {src._nearDuplicateCandidate && (
+                            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200" title="Near-duplicate candidate (preserved for independent coverage)">
+                              Near-Dup Review
+                            </span>
                           )}
                           {src.date && <span className="text-[10px] font-bold text-gray-400">{src.date}</span>}
                         </div>
@@ -2891,7 +3000,7 @@ function AppMain() {
 
             {/* SECTOR 2: ALERTS & INTEL LEDGER */}
             <section className="w-[40%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-lg relative">
-              <div className="p-4 border-b border-gray-100 flex items-center shrink-0 bg-white">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
                 <span className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Intel Ledger</span>
               </div>
               {/* Filter tabs */}
@@ -2957,16 +3066,19 @@ function AppMain() {
                             {(() => {
                               const sourceNames = [...new Set(art.sources?.map(s => s.source?.title || s.source?.uri || 'Unknown Source'))];
                               const hasPreferred = art.sources?.some(s => params.prefSrc?.some(ps => domainMatch(s.source?.uri, ps.uri)));
-                              const sourceText = sourceNames.length > 1
-                                ? `${sourceNames[0]} + ${sourceNames.length - 1} more`
-                                : sourceNames[0] || 'Unknown Source';
+                              const sourceText = sourceNames[0] || 'Unknown Source';
+                              const hasNearDup = art._nearDuplicateCandidate || art.sources?.some(s => s._nearDuplicateCandidate);
+                              const dupCount = (art._duplicates?.length || 0) + (art.sources?.reduce((acc, s) => acc + (s._duplicates?.length || 0), 0) || 0);
+
                               return (
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${hasPreferred
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-gray-50 text-gray-500 border-gray-200'
-                                  }`}>
-                                  {hasPreferred && ' '}{sourceText}
-                                </span>
+                                <>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${hasPreferred
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                                    }`}>
+                                    {hasPreferred && ' '}{sourceText}
+                                  </span>
+                                </>
                               );
                             })()}
                           </div>
@@ -2990,7 +3102,13 @@ function AppMain() {
                             </p>
                           ) : null;
                         })()}
-                        <p className="text-[11px] font-semibold text-gray-500 uppercase mb-3 tracking-wide">{art.ai?.hazard || 'Hazard'} in {art.ai?.region || 'Global'}</p>
+                        <p className="text-[11px] font-semibold text-gray-500 uppercase mb-3 tracking-wide flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{art.ai?.exact_location || art.ai?.region || 'Global'}</span>
+                        </p>
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
                           <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString()}</span>
                           <div className="flex items-center gap-2">

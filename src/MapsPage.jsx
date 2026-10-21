@@ -620,7 +620,8 @@ export default function MapsPage({
   autoPilot = false,
   autoPilotInterval = 5,
   targetZone = '',
-  radius = 0
+  radius = 0,
+  companyLocations = []
 }) {
   const [markers, setMarkers] = useState([]);
   const [employeeMarkers, setEmployeeMarkers] = useState([]);
@@ -1246,6 +1247,50 @@ export default function MapsPage({
     return fullName.includes(searchQuery.toLowerCase()) || (emp.company || '').toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  // 8b. Facility Markers — resolve coords + check for active alerts in same city/country
+  const facilityMarkers = useMemo(() => {
+    if (!companyLocations || companyLocations.length === 0) return [];
+    const alertArticles = combinedArticles.filter(a => a.ai?.classification === 'ALERT');
+
+    return companyLocations.map(cl => {
+      const place = cl.city || cl.country;
+      if (!place) return null;
+
+      // Try to resolve coordinates from CITY_COORDINATES table
+      let coords = CITY_COORDINATES[place] ||
+        CITY_COORDINATES[place.charAt(0).toUpperCase() + place.slice(1)];
+      if (!coords) {
+        const key = Object.keys(CITY_COORDINATES).find(k => k.toLowerCase() === place.toLowerCase());
+        if (key) coords = CITY_COORDINATES[key];
+      }
+      if (!coords) return null;
+
+      // Check if any alert covers this facility (city or country match)
+      const city = (cl.city || '').toLowerCase();
+      const country = (cl.country || '').toLowerCase();
+      const matchingAlerts = alertArticles.filter(art => {
+        const reg = (art.ai?.region || '').toLowerCase();
+        const exLoc = (art.ai?.exact_location || '').toLowerCase();
+        return (city && (reg.includes(city) || exLoc.includes(city))) ||
+               (country && (reg.includes(country) || exLoc.includes(country)));
+      });
+
+      return {
+        lat: coords.lat,
+        lon: coords.lon,
+        label: cl.city ? `${cl.city}${cl.country ? ', ' + cl.country : ''}` : cl.country,
+        city: cl.city || '',
+        country: cl.country || '',
+        type: cl.location_type || 'Facility',
+        headcount: cl.headcount,
+        criticality: cl.criticality || 'Normal',
+        hasAlerts: matchingAlerts.length > 0,
+        alertCount: matchingAlerts.length,
+        topAlert: matchingAlerts[0] || null,
+      };
+    }).filter(Boolean);
+  }, [companyLocations, combinedArticles]);
+
   // 9. Interactive fly-to and popup triggers
   const handleSelectThreat = (threat) => {
     // If it's a global threat, zoom out to global view. Otherwise, zoom in close.
@@ -1385,6 +1430,50 @@ export default function MapsPage({
     });
   };
 
+  const createFacilityIcon = (hasAlerts) => {
+    return L.divIcon({
+      className: 'facility-map-marker',
+      html: `
+        <div style="
+          position: relative;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <div style="
+            width: 22px;
+            height: 22px;
+            background: ${hasAlerts ? 'rgba(239,68,68,0.15)' : 'rgba(6,182,212,0.15)'};
+            border: 2.5px solid ${hasAlerts ? '#ef4444' : '#06b6d4'};
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px ${hasAlerts ? 'rgba(239,68,68,0.5)' : 'rgba(6,182,212,0.4)'};
+          ">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${hasAlerts ? '#ef4444' : '#06b6d4'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          ${hasAlerts ? `<div style="
+            position: absolute;
+            top: -2px; right: -2px;
+            width: 10px; height: 10px;
+            background: #ef4444;
+            border: 1.5px solid white;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+          "></div>` : ''}
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+  };
+
   const alertCount = combinedArticles.filter(a => a.ai?.classification === 'ALERT').length;
   const reportCount = combinedArticles.filter(a => a.ai?.classification === 'INFORMATIVE').length;
 
@@ -1478,6 +1567,18 @@ export default function MapsPage({
                 </svg>
                 Panel
               </button>
+              {facilityMarkers.length > 0 && (
+                <button onClick={() => setActiveTab('facilities')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'facilities' ? 'active' : ''}`}>
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                  Facilities ({facilityMarkers.length})
+                  {facilityMarkers.some(f => f.hasAlerts) && (
+                    <span style={{ width: 7, height: 7, background: '#ef4444', borderRadius: '50%', display: 'inline-block', flexShrink: 0, animation: 'pulse-dot 1.5s infinite' }} />
+                  )}
+                </button>
+              )}
             </div>
             <div className="overlay-search">
               <input
@@ -1546,9 +1647,7 @@ export default function MapsPage({
                               </svg>
                               {(() => {
                               const sourceNames = [...new Set(threat.sources?.map(s => s.source?.title || s.source?.uri || 'Unknown Source'))];
-                              return sourceNames.length > 1
-                                ? `${sourceNames[0]} + ${sourceNames.length - 1} more`
-                                : sourceNames[0] || 'Unknown Source';
+                              return sourceNames[0] || 'Unknown Source';
                             })()}</span>
                           </div>
                         </div>
@@ -1759,6 +1858,107 @@ export default function MapsPage({
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Clear Geocode Cache
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* FACILITIES TAB */}
+            {activeTab === 'facilities' && (
+              <div className="tab-panel flex-col">
+                {facilityMarkers.some(f => f.hasAlerts) && (
+                  <div style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: 7, height: 7, background: '#ef4444', borderRadius: '50%', display: 'inline-block', flexShrink: 0, animation: 'pulse-dot 1.5s infinite' }} />
+                    <span style={{ fontSize: '9px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {facilityMarkers.filter(f => f.hasAlerts).length} Facilit{facilityMarkers.filter(f => f.hasAlerts).length > 1 ? 'ies' : 'y'} Under Active Alert
+                    </span>
+                  </div>
+                )}
+                <div className="scrollable-list">
+                  {facilityMarkers.length === 0 ? (
+                    <div className="list-empty">No facility locations configured. Add locations to your company profile.</div>
+                  ) : (
+                    facilityMarkers.map((fac, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setFlyToCoords({ center: [fac.lat, fac.lon], zoom: 10 });
+                          setActivePopup({
+                            position: [fac.lat, fac.lon],
+                            type: 'facility',
+                            label: fac.label,
+                            type_label: fac.type,
+                            headcount: fac.headcount,
+                            criticality: fac.criticality,
+                            hasAlerts: fac.hasAlerts,
+                            alertCount: fac.alertCount,
+                            topAlert: fac.topAlert,
+                          });
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '10px',
+                          padding: '10px 12px', cursor: 'pointer',
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          borderLeft: `3px solid ${fac.hasAlerts ? '#ef4444' : '#06b6d4'}`,
+                          background: fac.hasAlerts ? 'rgba(239,68,68,0.07)' : 'transparent',
+                          transition: 'background 0.15s'
+                        }}
+                      >
+                        {/* Icon */}
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                          background: fac.hasAlerts ? 'rgba(239,68,68,0.15)' : 'rgba(6,182,212,0.15)',
+                          border: `2px solid ${fac.hasAlerts ? '#ef4444' : '#06b6d4'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          position: 'relative'
+                        }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={fac.hasAlerts ? '#ef4444' : '#06b6d4'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                          </svg>
+                          {fac.hasAlerts && (
+                            <div style={{
+                              position: 'absolute', top: -3, right: -3,
+                              width: 9, height: 9, background: '#ef4444',
+                              border: '1.5px solid #0f172a', borderRadius: '50%',
+                              animation: 'pulse-dot 1.5s infinite'
+                            }} />
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: '800', fontSize: '11px', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {fac.label}
+                            </span>
+                            {fac.hasAlerts && (
+                              <span style={{ fontSize: '7px', fontWeight: '900', background: '#ef4444', color: 'white', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+                                {fac.alertCount} Alert{fac.alertCount > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '9px', color: fac.hasAlerts ? '#f87171' : '#06b6d4', fontWeight: '700', marginTop: 1 }}>
+                            {fac.type} · {fac.criticality}
+                          </div>
+                          {fac.hasAlerts && fac.topAlert && (
+                            <div style={{ fontSize: '8px', color: '#fca5a5', marginTop: 3, lineHeight: '1.3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              ⚠ {fac.topAlert.ai?.hazard} — {fac.topAlert.ai?.region}
+                            </div>
+                          )}
+                          {fac.headcount && (
+                            <div style={{ fontSize: '8px', color: '#64748b', marginTop: 2 }}>
+                              👥 {parseInt(fac.headcount).toLocaleString()} personnel
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Arrow */}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 6 }}>
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -2035,6 +2235,32 @@ export default function MapsPage({
               />
             ))}
 
+            {/* Facility Markers (Cyan = safe, Red outline = under alert) */}
+            {facilityMarkers.map((fac, idx) => (
+              <Marker
+                key={`fac-${idx}`}
+                position={[fac.lat, fac.lon]}
+                icon={createFacilityIcon(fac.hasAlerts)}
+                eventHandlers={{
+                  click: () => {
+                    setFlyToCoords({ center: [fac.lat, fac.lon], zoom: 10 });
+                    setActivePopup({
+                      position: [fac.lat, fac.lon],
+                      type: 'facility',
+                      label: fac.label,
+                      type_label: fac.type,
+                      headcount: fac.headcount,
+                      criticality: fac.criticality,
+                      hasAlerts: fac.hasAlerts,
+                      alertCount: fac.alertCount,
+                      topAlert: fac.topAlert,
+                    });
+                    setActiveTab('facilities');
+                  }
+                }}
+              />
+            ))}
+
             {/* Single Unified Floating Popup */}
             {activePopup && (
               <Popup
@@ -2068,6 +2294,38 @@ export default function MapsPage({
                         <div style={{ marginTop: '8px', background: '#fef2f2', padding: '6px', borderRadius: '4px', border: '1px solid #fecaca' }}>
                           <span style={{ fontSize: '7px', fontWeight: '900', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mitigation Action</span>
                           <p style={{ fontSize: '9px', color: '#991b1b', margin: '2px 0 0' }}>{activePopup.mitigation}</p>
+                        </div>
+                      )}
+                    </>
+                  ) : activePopup.type === 'facility' ? (
+                    <>
+                      <span className="maps-popup-badge" style={{ background: activePopup.hasAlerts ? '#ef4444' : '#06b6d4', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-1px' }}>
+                          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                          <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        {activePopup.hasAlerts ? 'FACILITY ALERT' : 'FACILITY'}
+                      </span>
+                      <h3 className="maps-popup-title">{activePopup.label}</h3>
+                      <p className="maps-popup-region">{activePopup.type_label} · Criticality: {activePopup.criticality}</p>
+                      {activePopup.headcount && (
+                        <p className="maps-popup-text" style={{ fontSize: '9px', color: '#6b7280', margin: '4px 0' }}>
+                          👥 {parseInt(activePopup.headcount).toLocaleString()} personnel on-site
+                        </p>
+                      )}
+                      {activePopup.hasAlerts && activePopup.topAlert && (
+                        <div style={{ marginTop: '8px', background: '#fef2f2', padding: '6px', borderRadius: '4px', border: '1px solid #fecaca' }}>
+                          <span style={{ fontSize: '7px', fontWeight: '900', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            ⚠ {activePopup.alertCount} Active Alert{activePopup.alertCount > 1 ? 's' : ''} in Area
+                          </span>
+                          <p style={{ fontSize: '9px', color: '#991b1b', margin: '2px 0 0' }}>
+                            {activePopup.topAlert.ai?.hazard} — {activePopup.topAlert.ai?.region}
+                          </p>
+                        </div>
+                      )}
+                      {!activePopup.hasAlerts && (
+                        <div style={{ marginTop: '8px', background: '#ecfdf5', padding: '6px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+                          <span style={{ fontSize: '9px', fontWeight: '700', color: '#065f46' }}>✓ No active alerts in this area</span>
                         </div>
                       )}
                     </>

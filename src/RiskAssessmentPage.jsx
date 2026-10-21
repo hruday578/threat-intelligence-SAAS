@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { generateThreatRecommendations, isValidDomain, extractDomainContext } from './services/threatRecommendations';
 
 // Fix Leaflet default icon path broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -445,17 +446,18 @@ const STEPS = [
 ];
 
 const EMPTY_PROFILE = {
-  company_name: '', industry: '', hq_country: '', hq_city: '',
+  company_name: '', company_domain: '', industry: '', hq_country: '', hq_city: '',
   hq_address_line1: '', hq_address_line2: '', hq_area: '',
   hq_state: '', hq_pincode: '',
   hq_lat: '', hq_lng: '',
   num_employees: '', annual_revenue: '',
   target_hazards: [],
+  threat_suggestions: [],
   critical_apps: '', key_systems: [], mfa_implemented: false,
   backup_strategy: 'None', cloud_providers: [],
 };
-const EMPTY_LOCATION = { country: '', city: '', location_type: 'Branch', headcount: '', radius: 100, criticality: 'Medium', notes: '' };
-const EMPTY_VENDOR   = { vendor_name: '', vendor_country: '', vendor_city: '', goods: [], dependency_level: 'Important', single_source: false, notes: '' };
+const EMPTY_LOCATION = { country: '', city: '', location_type: 'Branch', headcount: '', radius: 100, criticality: 'Medium', notes: '', accepted_threats: [], threat_suggestions: [] };
+const EMPTY_VENDOR   = { vendor_name: '', vendor_domain: '', vendor_country: '', vendor_city: '', goods: [], dependency_level: 'Important', single_source: false, notes: '', accepted_threats: [], threat_suggestions: [] };
 
 const STORAGE_KEY = 'alertem_risk_profiles';
 
@@ -798,7 +800,7 @@ function RiskScoreRing({ score }) {
 }
 
 //  Main Component 
-export default function RiskAssessmentPage({ articles = [], initialTab = 'profile' }) {
+export default function RiskAssessmentPage({ articles = [], initialTab = 'profile', provider = 'groq-120b', aiKey = '' }) {
   const [step, setStep] = useState(initialTab);
   const [profile, setProfile] = useState({ ...EMPTY_PROFILE });
   const [locations, setLocations] = useState([]);
@@ -920,7 +922,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
   //  Step renderer 
   const renderStep = () => {
     switch (step) {
-      case 'profile': return <StepProfile profile={profile} setP={setP} activeProfileId={activeProfileId} handleDelete={handleDelete} />;
+      case 'profile': return <StepProfile profile={profile} setP={setP} activeProfileId={activeProfileId} handleDelete={handleDelete} provider={provider} aiKey={aiKey} />;
       case 'locations': return (
         <StepLocations
           locations={locations} setLocations={setLocations}
@@ -928,6 +930,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
           editLocIdx={editLocIdx} setEditLocIdx={setEditLocIdx}
           openAddLoc={openAddLoc} openEditLoc={openEditLoc} saveLoc={saveLoc}
           activeThreats={activeThreats}
+          provider={provider} aiKey={aiKey}
         />
       );
       case 'vendors': return (
@@ -937,6 +940,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
           editVendIdx={editVendIdx} setEditVendIdx={setEditVendIdx}
           openAddVend={openAddVend} openEditVend={openEditVend} saveVend={saveVend}
           activeThreats={activeThreats}
+          provider={provider} aiKey={aiKey}
         />
       );
       case 'it': return <StepIT profile={profile} setP={setP} activeThreats={activeThreats} />;
@@ -1100,7 +1104,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
 // 
 // STEP 1 — Company Profile
 // 
-function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
+function StepProfile({ profile, setP, activeProfileId, handleDelete, provider, aiKey }) {
   return (
     <div className="ra-form-grid">
       <div className="ra-section-card ra-section-card--full">
@@ -1137,9 +1141,95 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
             <label className="ra-label">Annual Revenue (USD)</label>
             <input className="ra-input" type="number" min="0" value={profile.annual_revenue} onChange={e => setP('annual_revenue', e.target.value)} placeholder="e.g. 25000000" />
           </div>
+          <div className="ra-field">
+            <label className="ra-label">Company Domain</label>
+            <input className="ra-input" value={profile.company_domain || ''} onChange={e => setP('company_domain', e.target.value)} placeholder="e.g. acme.com" />
+            {profile.company_domain && isValidDomain(profile.company_domain) && (
+              <span style={{ fontSize: 9, color: '#16a34a', fontWeight: 700, marginTop: 2, display: 'block' }}>
+                ✓ Valid domain: {extractDomainContext(profile.company_domain)?.brandName} ({extractDomainContext(profile.company_domain)?.inferredType})
+              </span>
+            )}
+          </div>
           <div className="ra-field ra-field--lg" style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label className="ra-label" style={{ margin: 0 }}>Potential Threats & Risks (Target Hazards) *</label>
+              <button
+                type="button"
+                onClick={async () => {
+                  setP('_loading_recs', true);
+                  try {
+                    const recs = await generateThreatRecommendations({
+                      entityType: 'COMPANY',
+                      entityId: profile.company_name || 'company',
+                      entityData: profile,
+                      provider,
+                      apiKey: aiKey
+                    });
+                    setP('threat_suggestions', recs);
+                  } finally {
+                    setP('_loading_recs', false);
+                  }
+                }}
+                disabled={profile._loading_recs}
+                className="ra-btn ra-btn-sm"
+                style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: 10, padding: '4px 10px', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}
+              >
+                {profile._loading_recs ? 'Analyzing Domain & Risk...' : '✨ Generate AI Threat Suggestions'}
+              </button>
+            </div>
+
+            {/* Interactive Threat Suggestions Panel */}
+            {profile.threat_suggestions && profile.threat_suggestions.length > 0 && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569' }}>
+                    AI Evidence-Backed Threat Recommendations ({profile.threat_suggestions.length})
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748b' }}>Review & approve criteria to add to active hazards</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {profile.threat_suggestions.map(s => {
+                    const isAccepted = (profile.target_hazards || []).includes(s.specificThreat);
+                    return (
+                      <div key={s.id} style={{ background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: '#1e293b' }}>{s.specificThreat}</span>
+                            <span style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: 4 }}>{s.threatCategory}</span>
+                            <span style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: s.confidence === 'HIGH' ? '#fef2f2' : '#fffbeb', color: s.confidence === 'HIGH' ? '#dc2626' : '#d97706', padding: '1px 6px', borderRadius: 4 }}>
+                              {s.confidence} Confidence
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isAccepted) {
+                                setP('target_hazards', (profile.target_hazards || []).filter(h => h !== s.specificThreat));
+                              } else {
+                                setP('target_hazards', [...(profile.target_hazards || []), s.specificThreat]);
+                              }
+                            }}
+                            style={{
+                              fontSize: 9, fontWeight: 800, textTransform: 'uppercase', padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                              background: isAccepted ? '#16a34a' : '#f1f5f9',
+                              color: isAccepted ? '#ffffff' : '#334155',
+                              border: isAccepted ? '1px solid #16a34a' : '1px solid #cbd5e1'
+                            }}
+                          >
+                            {isAccepted ? '✓ Accepted' : '＋ Accept Threat'}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 10, color: '#475569', margin: '2px 0 4px 0', lineHeight: 1.4 }}>{s.rationale}</p>
+                        <p style={{ fontSize: 9, color: '#64748b', margin: 0, fontStyle: 'italic' }}>Evidence: {s.evidence}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <TagInput 
-              label="Potential Threats & Risks (Target Hazards) *"
+              label=""
               tags={profile.target_hazards || []}
               presets={['Natural Disaster', 'Wildfire', 'Flood', 'Earthquake', 'Hurricane', 'Tornado', 'Heatwave', 'Cyber Attack', 'Data Breach', 'Explosion', 'Chemical Spill', 'Power Outage', 'Terrorism', 'Civil Unrest', 'Riot', 'Supply Chain Disruption']}
               onAdd={t => setP('target_hazards', [...(profile.target_hazards || []), t])}
@@ -1273,7 +1363,7 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete }) {
 // 
 // STEP 2 — Operational Locations
 // 
-function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLocIdx, setEditLocIdx, openAddLoc, openEditLoc, saveLoc, activeThreats }) {
+function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLocIdx, setEditLocIdx, openAddLoc, openEditLoc, saveLoc, activeThreats, provider, aiKey }) {
   const setLD = (k, v) => setLocDraft(d => ({ ...d, [k]: v }));
   const isLocThreatened = (loc) =>
     activeThreats.some(t => checkThreatMatch(loc, t));
@@ -1325,6 +1415,83 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="ra-field ra-field--full">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label className="ra-label" style={{ margin: 0 }}>Location-Specific Accepted Threats</label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setLD('_loading_recs', true);
+                      try {
+                        const recs = await generateThreatRecommendations({
+                          entityType: 'LOCATION',
+                          entityId: `${locDraft.city || locDraft.country}_${Date.now()}`,
+                          entityData: locDraft,
+                          provider,
+                          apiKey: aiKey
+                        });
+                        setLD('threat_suggestions', recs);
+                      } finally {
+                        setLD('_loading_recs', false);
+                      }
+                    }}
+                    disabled={locDraft._loading_recs || !locDraft.country}
+                    className="ra-btn ra-btn-sm"
+                    style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: 10, padding: '3px 8px', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {locDraft._loading_recs ? 'Analyzing Location Exposure...' : '✨ Suggest Location Threats'}
+                  </button>
+                </div>
+
+                {locDraft.threat_suggestions && locDraft.threat_suggestions.length > 0 && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                    <div style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase', marginBottom: 6 }}>
+                      AI Location Threat Suggestions:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {locDraft.threat_suggestions.map(s => {
+                        const isAccepted = (locDraft.accepted_threats || []).includes(s.specificThreat);
+                        return (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 6, padding: '6px 8px' }}>
+                            <div>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: '#1e293b' }}>{s.specificThreat}</span>
+                              <span style={{ fontSize: 8, color: '#64748b', marginLeft: 6 }}>({s.threatCategory})</span>
+                              <p style={{ fontSize: 9, color: '#475569', margin: '2px 0 0 0' }}>{s.rationale}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isAccepted) {
+                                  setLD('accepted_threats', (locDraft.accepted_threats || []).filter(h => h !== s.specificThreat));
+                                } else {
+                                  setLD('accepted_threats', [...(locDraft.accepted_threats || []), s.specificThreat]);
+                                }
+                              }}
+                              style={{
+                                fontSize: 8, fontWeight: 800, textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
+                                background: isAccepted ? '#16a34a' : '#f1f5f9',
+                                color: isAccepted ? '#ffffff' : '#334155',
+                                border: isAccepted ? '1px solid #16a34a' : '1px solid #cbd5e1'
+                              }}
+                            >
+                              {isAccepted ? '✓ Added' : '＋ Add'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <TagInput
+                  label=""
+                  tags={locDraft.accepted_threats || []}
+                  presets={['Flood', 'Earthquake', 'Severe Weather', 'Power Outage', 'Civil Unrest', 'Port Shutdown']}
+                  onAdd={t => setLD('accepted_threats', [...(locDraft.accepted_threats || []), t])}
+                  onRemove={t => setLD('accepted_threats', (locDraft.accepted_threats || []).filter(h => h !== t))}
+                  placeholder="e.g. Typhoon, Flash Flood"
+                />
               </div>
               <div className="ra-field ra-field--full">
                 <label className="ra-label">Notes</label>
@@ -1411,7 +1578,7 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
 // 
 // STEP 3 — Vendors & Suppliers
 // 
-function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx, setEditVendIdx, openAddVend, openEditVend, saveVend, activeThreats }) {
+function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx, setEditVendIdx, openAddVend, openEditVend, saveVend, activeThreats, provider, aiKey }) {
   const setVD = (k, v) => setVendDraft(d => ({ ...d, [k]: v }));
   const threatRegions = activeThreats.map(t => (t.ai?.region || '').toLowerCase());
   const isVendThreatened = (v) =>
@@ -1476,6 +1643,87 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
                     <span className="ra-toggle-thumb" />
                   </button>
                 </div>
+              </div>
+              <div className="ra-field">
+                <label className="ra-label">Vendor Domain</label>
+                <input className="ra-input" value={vendDraft.vendor_domain || ''} onChange={e => setVD('vendor_domain', e.target.value)} placeholder="e.g. supplier.com" />
+              </div>
+              <div className="ra-field ra-field--full">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label className="ra-label" style={{ margin: 0 }}>Vendor-Specific Accepted Threats</label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setVD('_loading_recs', true);
+                      try {
+                        const recs = await generateThreatRecommendations({
+                          entityType: 'VENDOR',
+                          entityId: `${vendDraft.vendor_name || 'vendor'}_${Date.now()}`,
+                          entityData: vendDraft,
+                          provider,
+                          apiKey: aiKey
+                        });
+                        setVD('threat_suggestions', recs);
+                      } finally {
+                        setVD('_loading_recs', false);
+                      }
+                    }}
+                    disabled={vendDraft._loading_recs || !vendDraft.vendor_name}
+                    className="ra-btn ra-btn-sm"
+                    style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: 10, padding: '3px 8px', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {vendDraft._loading_recs ? 'Analyzing Supply Chain Exposure...' : '✨ Suggest Vendor Threats'}
+                  </button>
+                </div>
+
+                {vendDraft.threat_suggestions && vendDraft.threat_suggestions.length > 0 && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                    <div style={{ fontSize: 9, fontWeight: 900, color: '#475569', textTransform: 'uppercase', marginBottom: 6 }}>
+                      AI Vendor Threat Suggestions:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {vendDraft.threat_suggestions.map(s => {
+                        const isAccepted = (vendDraft.accepted_threats || []).includes(s.specificThreat);
+                        return (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 6, padding: '6px 8px' }}>
+                            <div>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: '#1e293b' }}>{s.specificThreat}</span>
+                              <span style={{ fontSize: 8, color: '#64748b', marginLeft: 6 }}>({s.threatCategory})</span>
+                              <p style={{ fontSize: 9, color: '#475569', margin: '2px 0 0 0' }}>{s.rationale}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isAccepted) {
+                                  setVD('accepted_threats', (vendDraft.accepted_threats || []).filter(h => h !== s.specificThreat));
+                                } else {
+                                  setVD('accepted_threats', [...(vendDraft.accepted_threats || []), s.specificThreat]);
+                                }
+                              }}
+                              style={{
+                                fontSize: 8, fontWeight: 800, textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
+                                background: isAccepted ? '#16a34a' : '#f1f5f9',
+                                color: isAccepted ? '#ffffff' : '#334155',
+                                border: isAccepted ? '1px solid #16a34a' : '1px solid #cbd5e1'
+                              }}
+                            >
+                              {isAccepted ? '✓ Added' : '＋ Add'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <TagInput
+                  label=""
+                  tags={vendDraft.accepted_threats || []}
+                  presets={['Single-Source Bottleneck', 'Component Shortage', 'Export Restrictions', 'Shipping Delays', 'Cyber Attack']}
+                  onAdd={t => setVD('accepted_threats', [...(vendDraft.accepted_threats || []), t])}
+                  onRemove={t => setVD('accepted_threats', (vendDraft.accepted_threats || []).filter(h => h !== t))}
+                  placeholder="e.g. Export Ban, Port Congestion"
+                />
               </div>
               <div className="ra-field ra-field--full">
                 <label className="ra-label">Notes</label>

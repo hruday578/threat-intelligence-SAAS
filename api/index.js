@@ -342,6 +342,31 @@ app.post('/api/broadcast', async (req, res) => {
   }
 });
 
+app.post('/api/news-proxy', async (req, res) => {
+  try {
+    const body = { ...req.body };
+    // Inject backend API key from environment if not supplied in client body
+    if (!body.apiKey) {
+      body.apiKey = process.env.NEWSAPI_AI_KEY || process.env.VITE_NEWSAPI_KEY;
+    }
+    if (!body.apiKey) {
+      return res.status(400).json({ error: 'NewsAPI.ai key is missing. Set NEWSAPI_AI_KEY in backend environment.' });
+    }
+
+    const response = await fetch('https://eventregistry.org/api/v1/article/getArticles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[api/news-proxy] Error:', err.message);
+    return res.status(502).json({ error: 'News API proxy failed: ' + err.message });
+  }
+});
+
 app.post('/api/ai-proxy', async (req, res) => {
   try {
     const { provider, apiKey, model, messages, temperature } = req.body;

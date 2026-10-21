@@ -21,10 +21,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://newsapi.ai/api/v1/article/getArticles', {
+    const body = { ...req.body };
+    if (!body.apiKey) {
+      body.apiKey = process.env.NEWSAPI_AI_KEY || process.env.VITE_NEWSAPI_KEY;
+    }
+    if (!body.apiKey) {
+      return res.status(400).json({ error: 'NewsAPI.ai key is missing. Set NEWSAPI_AI_KEY in backend environment.' });
+    }
+
+    const response = await fetch('https://eventregistry.org/api/v1/article/getArticles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
