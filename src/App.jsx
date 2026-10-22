@@ -362,10 +362,8 @@ const DURATIONS = [
   { label: '30D', value: '30d', days: 30 }
 ];
 const PROVIDERS = [
-  { id: 'groq-8b', label: 'GROQ 8B ULTRA FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
   { id: 'groq-20b', label: 'GROQ 20B FAST', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-20b' },
   { id: 'groq-120b', label: 'GROQ 120B', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'openai/gpt-oss-120b' },
-  { id: 'groq-compound', label: 'GROQ COMPOUND', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'groq/compound' },
   { id: 'openrouter', label: 'OPENROUTER', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.3-70b-instruct:free' },
   { id: 'deepseek', label: 'DEEPSEEK', endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' }
 ];
@@ -1121,7 +1119,7 @@ function AppMain() {
   const [configExpanded, setConfigExpanded] = useState(true);
   const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '');
   const [aiKey, setAiKey] = useState(() => import.meta.env.VITE_GROQ_API_KEY || '');
-  const [provider, setProvider] = useState('groq-8b');
+  const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState([]);
   const [zonesInput, setZonesInput] = useState('');
   const [params, setParams] = useState({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] });
@@ -1812,7 +1810,11 @@ function AppMain() {
       // Process all unique articles from the 100-article query
       const targetRaw = uniqueRaw;
 
-      const activeProvider = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
+      // When company profile is active, always run on GROQ 120B
+      const activeProvider = (currentProfile && PROVIDERS.find(p => p.id === 'groq-120b'))
+        || PROVIDERS.find(p => p.id === provider)
+        || PROVIDERS.find(p => p.id === 'groq-120b')
+        || PROVIDERS[0];
       const locationContext = [...params.cities, ...params.states, ...params.locs].map(l => l.label).join(', ') || 'Global';
 
       // High-Throughput Batch Processing with Parallel Execution (Chunk size: 12)
@@ -1837,8 +1839,9 @@ function AppMain() {
           let aiRes;
 
           let apiProviderName = 'groq';
-          if (provider === 'openrouter') apiProviderName = 'openrouter';
-          else if (provider === 'deepseek') apiProviderName = 'deepseek';
+          const effectiveProviderId = activeProvider.id;
+          if (effectiveProviderId === 'openrouter') apiProviderName = 'openrouter';
+          else if (effectiveProviderId === 'deepseek') apiProviderName = 'deepseek';
 
           try {
             aiRes = await fetch('/api/ai-proxy', {
@@ -2206,7 +2209,7 @@ function AppMain() {
             key={riskAssessmentKey}
             articles={articles}
             initialTab={riskAssessmentInitialTab}
-            provider={provider}
+            provider="groq-120b"
             aiKey={aiKey}
           />
         )}
