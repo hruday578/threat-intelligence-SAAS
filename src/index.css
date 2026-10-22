@@ -766,14 +766,22 @@ th {
 }
 
 .overlay-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   margin-bottom: 10px;
 }
+.overlay-tabs::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
 
 .tab-btn {
-  padding: 8px 4px;
+  padding: 8px 6px;
   font-size: 10px;
   font-weight: 800;
   text-align: center;
@@ -785,6 +793,11 @@ th {
   transition: all 0.2s;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .tab-btn:hover {
   color: #ef4444;
@@ -1130,6 +1143,10 @@ th {
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .simulator-toggle-btn:hover {
   background: #fef2f2;
