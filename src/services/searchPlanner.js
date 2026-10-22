@@ -128,7 +128,8 @@ export function buildUnifiedSearchPlan({
   // Location filter conditions
   const locationConditions = [];
   distinctCountries.slice(0, 5).forEach(cName => {
-    const wikiUri = `http://en.wikipedia.org/wiki/${encodeURIComponent(cName.replace(/ /g, '_'))}`;
+    const cleanName = (cName === 'United States of America' || cName === 'USA') ? 'United States' : cName;
+    const wikiUri = `http://en.wikipedia.org/wiki/${encodeURIComponent(cleanName.replace(/ /g, '_'))}`;
     locationConditions.push({ conceptUri: wikiUri });
   });
 

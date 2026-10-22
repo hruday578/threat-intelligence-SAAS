@@ -235,7 +235,7 @@ export const COUNTRIES = [
   { name: "United Arab Emirates (UAE / Dubai)", code: "AE" },
   { name: "United Kingdom", code: "GB" },
   { name: "United States Minor Outlying Islands", code: "UM" },
-  { name: "United States of America", code: "US" },
+  { name: "United States of America", code: "US", wikiName: "United States", uri: "http://en.wikipedia.org/wiki/United_States" },
   { name: "Uruguay", code: "UY" },
   { name: "Uzbekistan", code: "UZ" },
   { name: "Vanuatu", code: "VU" },

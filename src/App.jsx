@@ -245,8 +245,9 @@ STEP 1 — ARTICLE TYPE IDENTIFICATION:
 Determine the article type: INCIDENT_REPORT, OFFICIAL_WARNING, FORECAST, ANALYSIS, OPINION, RESEARCH, HISTORICAL, SCENARIO, POLICY, or OTHER.
 
 STEP 2 — OPERATIONAL EVENT CHECK:
-Does the article contain evidence of a concrete operational event? Set operational_event = true ONLY if the article reports:
+Does the article contain evidence of a concrete operational event or actionable hazard? Set operational_event = true if the article reports:
 - A confirmed current or recent incident (missile strike, bombing, terrorist attack, cyberattack, earthquake, flood, wildfire, cyclone, industrial accident, infrastructure failure, military attack, confirmed border incident)
+- Fresh/current forecast, advisory, watch, or weather warning reporting upcoming severe natural hazards, storms, flood risks, hail, tornadoes, wildfires, or atmospheric threats (e.g. Weather Channel, Met Dept, NOAA, NWS, IMD, or local news reporting storm/flood risk over upcoming days/hours)
 - An official actionable warning, advisory, watch, or forecast issued by a recognized authority (IMD, NDMA, NDRF, USGS, NOAA, NWS, SDMA, Met Dept, Police, Fire, Military, Coast Guard, WHO, Ministries, Port/Airport Authorities) for today or upcoming days
 - A confirmed imminent threat that is specific, credible, current, and supported by evidence in the article (e.g. "Government announces military strikes will begin tomorrow")
 - A developing operational situation with concrete evidence (troops actively deploying, evacuation underway, airport/port closure announced, emergency services mobilizing, military operation has begun, authorities responding to an active incident)
@@ -258,8 +259,8 @@ Determine threat_status:
 - CONFIRMED: An actual incident has occurred and is reported.
 - DEVELOPING: An operational situation is actively unfolding with concrete evidence.
 - IMMINENT: A specific, credible threat is confirmed for the very near future (hours/days) with official or authoritative evidence.
-- UPCOMING: An official forecast or advisory for a future event (e.g., weather warning for tomorrow).
-- HYPOTHETICAL: The article discusses possible/potential/predicted scenarios without concrete operational evidence.
+- UPCOMING: A current forecast, advisory, or prediction of an upcoming natural hazard, severe storm/flood risk, or weather threat.
+- HYPOTHETICAL: The article discusses abstract/speculative long-term scenarios (e.g., climate change decades ahead, political debates) without concrete operational evidence for the current timeframe.
 - HISTORICAL: The article describes a past completed event.
 - NONE: No threat element. Pure policy, general analysis, or unrelated.
 
@@ -273,16 +274,17 @@ Does the actual operational event/threat (NOT merely the discussion topic) direc
 STEP 5 — FINAL CLASSIFICATION:
 Apply these rules strictly:
 
-ALERT: Use ONLY when ALL of the following are true:
+ALERT: Use when ALL of the following are true:
   1. operational_event = true
   2. threat_status is CONFIRMED, DEVELOPING, IMMINENT, or UPCOMING
   3. The event/threat is relevant to ${zoneList}
+  * SPECIAL NATURAL DISASTER DIRECTIVE: Fresh/current articles reporting upcoming natural disasters, severe storm warnings, tornado watches, hail, or multiday flood risks in the monitored region MUST be classified as ALERT (set threat_status = UPCOMING or IMMINENT, and urgency = MED or HIGH).
 
 INFORMATIVE: Use for:
   - Analysis, opinion, research, think-tank reports, strategic assessments
   - Policy discussions, historical analysis, retrospective reporting
   - Humanitarian aid, charity work, relief foundations, post-disaster recovery, or supply deliveries (even if they mention a disaster in the context of the relief effort).
-  - Hypothetical threats, predictions without concrete operational evidence
+  - Pure political speculation or long-term climate theoretical discussions
   - General geopolitical discussion
   - Articles where operational_event = false
   - Official sources publishing historical reports, policy papers, or general assessments (official source does NOT automatically mean ALERT)
@@ -294,6 +296,8 @@ IRRELEVANT: Use when the article has no meaningful relationship to ${zoneList} o
 === CRITICAL EXAMPLES ===
 "Analysts warn that Iran could escalate the conflict." → INFORMATIVE (analysis/prediction, no operational event)
 "Iran launches ballistic missiles at Israel." → ALERT (confirmed military event)
+"Flood risk, severe storms threat from California to Colorado... flooding possible on Wednesday" → ALERT (fresh severe weather/flood risk forecast, threat_status = UPCOMING, urgency = MED)
+"Heavy rain and flash flood watch issued for Texas Gulf Coast" → ALERT (upcoming natural hazard advisory)
 "Pakistan can strike Afghanistan." → INFORMATIVE (capability discussion, no operational evidence)
 "Pakistan announces it will launch strikes against Afghanistan tomorrow." → ALERT (imminent operational development)
 "True Impact Foundation delivers flood relief to Assam." → INFORMATIVE (humanitarian relief effort, not an active new hazard)
@@ -302,7 +306,7 @@ IRRELEVANT: Use when the article has no meaningful relationship to ${zoneList} o
 "Historical analysis of the 2024 floods in Karnataka" → INFORMATIVE (historical)
 
 === UNCERTAINTY RULE ===
-When uncertain, first determine whether a concrete operational event, actionable official warning, or credible imminent threat is actually supported by the article's evidence. If the evidence is insufficient to establish a current/imminent operational threat, classify as INFORMATIVE rather than ALERT.
+When uncertain, first determine whether a concrete operational event, actionable official warning, or credible imminent/upcoming natural hazard is actually supported by the article's evidence. If the evidence is insufficient to establish a current/imminent/upcoming operational threat, classify as INFORMATIVE rather than ALERT.
 
 === OLD / PAST THREATS ===
 Each article includes an "article_date" field. Compare it against CURRENT DATE (${currentDate}). If the article_date is more than 7 days old AND the article describes a completed/resolved event, classify it as INFORMATIVE with threat_status = HISTORICAL. If the threat is ongoing, recurring, or the article is a current warning/advisory, classify based on the event-first rules above. 
