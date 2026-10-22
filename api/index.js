@@ -121,6 +121,7 @@ app.post('/api/broadcast', async (req, res) => {
     : urgency === 'MED'
     ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>'
     : '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+  const headerBgColor = urgency === 'HIGH' ? '#b91c1c' : urgency === 'MED' ? '#b45309' : '#1d4ed8';
   const headerGradient = urgency === 'HIGH'
     ? 'linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#f87171 100%)'
     : urgency === 'MED'
@@ -217,13 +218,32 @@ app.post('/api/broadcast', async (req, res) => {
       </td></tr>
 
       <!-- Hero -->
-      <tr><td style="background:${headerGradient};padding:32px 28px 28px;text-align:center;">
-        <div style="display:inline-block;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 14px;font-size:10px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#fff;margin-bottom:14px;">
-          ${classification}&nbsp;BRIEFING
+      <tr><td bgcolor="${headerBgColor}" style="background-color:${headerBgColor};background-image:${headerGradient};background:${headerGradient};padding:32px 28px 28px;text-align:center;">
+        <!--[if gte mso 9]>
+        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;">
+        <v:fill type="tile" color="${headerBgColor}" />
+        <v:textbox style="mso-fit-shape-to-text:true" inset="0,0,0,0">
+        <![endif]-->
+        <div>
+          <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px auto;">
+            <tr><td bgcolor="#334155" style="background:#334155;border:1px solid #475569;border-radius:20px;padding:4px 16px;font-size:10px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;text-align:center;">
+              ${classification}&nbsp;BRIEFING
+            </td></tr>
+          </table>
+          <div style="font-size:26px;font-weight:900;color:#ffffff;line-height:1.25;margin-bottom:8px;text-shadow:0 1px 3px rgba(0,0,0,0.5);">${hazard} Alert</div>
+          <div style="font-size:13px;font-weight:700;color:#ffffff;margin-bottom:16px;">
+            ${region}
+          </div>
+          <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr><td bgcolor="#0f172a" style="background:#0f172a;border-radius:8px;padding:6px 18px;font-size:11px;font-weight:900;letter-spacing:0.07em;color:#ffffff;text-align:center;">
+              ${urgencyIcon}${urgencyLabel}
+            </td></tr>
+          </table>
         </div>
-        <div style="font-size:26px;font-weight:900;color:#ffffff;line-height:1.25;margin-bottom:8px;">${hazard} Alert</div>
-        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> ${region}</div>
-        <div style="display:inline-block;background:rgba(0,0,0,0.25);border-radius:8px;padding:6px 16px;font-size:11px;font-weight:900;letter-spacing:0.07em;color:#fff;">${urgencyIcon}${urgencyLabel}</div>
+        <!--[if gte mso 9]>
+        </v:textbox>
+        </v:rect>
+        <![endif]-->
       </td></tr>
 
       <!-- Meta strip -->
