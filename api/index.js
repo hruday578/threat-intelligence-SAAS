@@ -43,7 +43,7 @@ app.post('/api/broadcast', async (req, res) => {
   const region        = threat.region        || threat.ai?.region        || 'Global';
   const urgency       = threat.urgency       || threat.ai?.urgency       || 'LOW';
   const title         = threat.title         || 'Threat Intelligence Briefing';
-  const articleUrl    = threat.articleUrl    || null;
+  const articleUrl    = threat.articleUrl || threat.url || threat.sourceUrl || threat.sources?.find(s => s?.url)?.url || null;
 
   const rawReasoning     = threat.reasoning     || threat.ai?.reasoning     || '';
   const rawMitigation    = threat.mitigation    || threat.ai?.mitigation    || '';
@@ -81,25 +81,18 @@ app.post('/api/broadcast', async (req, res) => {
       </table>`;
   }
 
-  function objectiveHtml(num, label, priority, steps, headerGrad, icon, accentColor, bgColor, borderColor) {
+  function objectiveHtml(num, label, priority, steps, solidBg, accentColor, bgColor, borderColor) {
     return `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid ${borderColor};">
-        <tr><td style="background:${headerGrad};padding:12px 16px;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td style="width:34px;vertical-align:middle;">
-              <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.15);text-align:center;line-height:28px;font-size:14px;">${icon}</div>
-            </td>
-            <td style="padding-left:10px;vertical-align:middle;">
-              <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.6);line-height:1;margin-bottom:3px;">Objective ${num}</div>
-              <div style="font-size:11px;font-weight:900;color:#ffffff;text-transform:uppercase;letter-spacing:0.04em;">${label}</div>
-            </td>
-          </tr></table>
+        <tr><td bgcolor="${solidBg}" style="background-color:${solidBg};background:${solidBg};padding:14px 18px;">
+          <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.7);line-height:1;margin-bottom:4px;">Objective ${num}</div>
+          <div style="font-size:13px;font-weight:900;color:#ffffff;text-transform:uppercase;letter-spacing:0.03em;">${label}</div>
         </td></tr>
-        <tr><td style="background:${bgColor};padding:8px 16px;border-top:1px solid ${borderColor};">
-          <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:${accentColor};">Priority: ${priority}</div>
+        <tr><td bgcolor="${bgColor}" style="background-color:${bgColor};padding:8px 16px;border-top:1px solid ${borderColor};">
+          <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:${accentColor};">Priority: ${priority}</div>
         </td></tr>
         ${steps.map((step, idx) => `
-        <tr><td style="background:#ffffff;padding:11px 16px;border-top:1px solid ${borderColor};">
+        <tr><td bgcolor="#ffffff" style="background:#ffffff;padding:11px 16px;border-top:1px solid ${borderColor};">
           <table cellpadding="0" cellspacing="0"><tr>
             <td style="vertical-align:top;padding-right:10px;padding-top:1px;">
               <span style="display:inline-block;min-width:22px;height:22px;border-radius:6px;background:${bgColor};color:${accentColor};font-size:10px;font-weight:900;text-align:center;line-height:22px;">${idx + 1}</span>
@@ -157,8 +150,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Establish real-time monitoring of official early warning systems (NWS, Met Dept, Emergency Services).',
       'Pre-position protective equipment (flood barriers, sandbags, window shutters, surge protectors) ahead of impact.',
     ],
-    'linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#ef4444 100%)',
-    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>', '#dc2626', '#fef2f2', '#fecaca'
+    '#991b1b', '#dc2626', '#fef2f2', '#fecaca'
   );
 
   const obj2Html = objectiveHtml(
@@ -173,8 +165,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Test backup power systems (UPS, fuel for generators) and verify fuel reserves for emergency vehicles.',
       'Establish high-frequency check-in schedules for IT infrastructure and critical operations teams.',
     ],
-    'linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 60%,#3b82f6 100%)',
-    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>', '#1d4ed8', '#eff6ff', '#bfdbfe'
+    '#1e40af', '#1d4ed8', '#eff6ff', '#bfdbfe'
   );
 
   const obj3Html = objectiveHtml(
@@ -189,8 +180,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Monitor airport closures, transit suspensions, and highway advisories continuously to reroute staff proactively.',
       'Establish clear pre-incident check-in protocols for field employees before communications networks become overloaded.',
     ],
-    'linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)',
-    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>', '#0f3460', '#f8fafc', '#cbd5e1'
+    '#0f172a', '#0f3460', '#f8fafc', '#cbd5e1'
   );
 
   const reportedDate = new Date(threat.date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -284,16 +274,17 @@ app.post('/api/broadcast', async (req, res) => {
           </td></tr>
         </table>
 
-        ${articleUrl ? `
         <!-- Read Full Article CTA (top) -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-          <tr><td align="center">
-            <a href="${articleUrl}" target="_blank"
-              style="display:inline-block;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#ffffff;font-size:11px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;padding:13px 32px;border-radius:10px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>&nbsp; Read Full Source Article &nbsp;→
-            </a>
-          </td></tr>
-        </table>` : ''}
+        <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 24px auto;">
+          <tr>
+            <td align="center" bgcolor="#0f172a" style="background-color:#0f172a;background:#0f172a;border-radius:10px;padding:12px 28px;">
+              <a href="${articleUrl || '#'}" target="_blank"
+                style="color:#ffffff;font-size:11px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;display:inline-block;">
+                Read Full Source Article &nbsp;&rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
 
         <!-- AI Mitigation + Civilian Actions -->
         ${mitigationHtml}
