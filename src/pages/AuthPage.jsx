@@ -106,7 +106,7 @@ export default function AuthPage() {
 
         {/* Footer info */}
         <div className="pt-2 text-center text-[9px] font-mono text-slate-400">
-          ALERTEM SaaS v2.0 • Secure Authentication Area
+          THREATLAZER.AI SaaS v2.0 • Secure Authentication Area
         </div>
       </div>
     </div>

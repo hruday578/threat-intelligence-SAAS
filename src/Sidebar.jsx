@@ -129,7 +129,7 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, e
       <div className="sidebar-footer">
         {!collapsed && (
           <div className="sidebar-footer-text">
-            <span className="sidebar-footer-brand">ALERTEM</span>
+            <span className="sidebar-footer-brand">THREATLAZER.AI</span>
             <span className="sidebar-footer-version">v2.0 Tactical</span>
           </div>
         )}

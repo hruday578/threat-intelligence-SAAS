@@ -2163,7 +2163,7 @@ function AppMain() {
     return (
       <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white space-y-4 font-sans">
         <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Initializing AlertEm SaaS Session...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Initializing ThreatLazer.AI SaaS Session...</p>
       </div>
     );
   }
@@ -3595,15 +3595,15 @@ function AppMain() {
                         alert(`❌ Failed to send: ${data.error}`);
                       }
                     } catch (err) {
-                      const subject = encodeURIComponent(`[AlertEm ${art.ai.classification}] ${art.ai.hazard} — ${art.ai.region}`);
+                      const subject = encodeURIComponent(`[ThreatLazer.AI ${art.ai.classification}] ${art.ai.hazard} — ${art.ai.region}`);
                       const body = encodeURIComponent(
-                        `ALERTEM INTELLIGENCE BRIEF\n${'='.repeat(50)}\n\n` +
+                        `THREATLAZER.AI INTELLIGENCE BRIEF\n${'='.repeat(50)}\n\n` +
                         `STATUS    : ${art.ai.classification}\nHAZARD    : ${art.ai.hazard}\nREGION    : ${art.ai.region}\nURGENCY   : ${art.ai.urgency || 'N/A'}\nDATE      : ${new Date(art.date).toLocaleDateString()}\n\n` +
                         `HEADLINE\n--------\n${art.title}\n\n` +
                         `AI REASONING\n------------\n${art.ai.reasoning || 'N/A'}\n\n` +
                         `MITIGATION STRATEGY\n-------------------\n${art.ai.mitigation || 'N/A'}\n\n` +
                         `CIVILIAN ACTION PROTOCOL\n------------------------\n${art.ai.citizen_action || 'N/A'}\n\n` +
-                        `${'='.repeat(50)}\nPowered by AlertEm Threat Intelligence Platform`
+                        `${'='.repeat(50)}\nPowered by ThreatLazer.AI Platform`
                       );
                       const toList = selectedEmployees.map(e => e.companyEmail).filter(Boolean).join(',');
                       window.location.href = `mailto:${toList}?subject=${subject}&body=${body}`;
