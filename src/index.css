@@ -33,6 +33,15 @@ th {
    SIDEBAR STYLES
     */
 
+.sidebar-root,
+.sidebar-root *,
+.sidebar-nav-item,
+.sidebar-nav-label,
+.sidebar-footer-brand,
+.sidebar-footer-version {
+  font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+}
+
 .sidebar-root {
   height: 100vh;
   background: linear-gradient(180deg, #111827 0%, #0a0e17 100%);
