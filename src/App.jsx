@@ -1988,14 +1988,36 @@ function AppMain() {
         masterProcessedRef.current.push(...processedChunk);
       });
 
-      // Consolidation Logic
+      // Consolidation Logic: Intelligent Incident-Level Clustering
       const groupedEvents = {};
+
+      // Helper to match existing incident by hazard and overlapping geographical tokens
+      const findMatchingGroupKey = (cls, hazard, regionStr) => {
+        const normHazard = hazard.toLowerCase().trim();
+        const normTokens = regionStr.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+        
+        for (const [key, grp] of Object.entries(groupedEvents)) {
+          if (grp.ai.classification !== cls) continue;
+          if ((grp.ai.hazard || '').toLowerCase().trim() !== normHazard) continue;
+
+          const grpTokens = (grp.ai.region || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+          // Check for shared meaningful location tokens (e.g. "tibet", "china", "california", "arizona")
+          const commonTokens = normTokens.filter(t => grpTokens.includes(t) && !['region', 'province', 'autonomous', 'state', 'county', 'district', 'area', 'near', 'north', 'south', 'east', 'west'].includes(t));
+          if (commonTokens.length > 0) {
+            return key;
+          }
+        }
+        return null;
+      };
 
       for (const art of masterProcessedRef.current) {
         const cls = art.ai.classification || 'INFORMATIVE';
         const hazard = (art.ai.hazard || 'General').toLowerCase().trim();
         const region = (art.ai.region || 'Global').toLowerCase().trim();
-        const groupKey = `${cls}_${hazard}_${region}`;
+        
+        // Find existing cluster or create a new unique cluster key
+        const existingKey = findMatchingGroupKey(cls, hazard, region);
+        const groupKey = existingKey || `${cls}_${hazard}_${region}`;
 
         if (!groupedEvents[groupKey]) {
           groupedEvents[groupKey] = {
