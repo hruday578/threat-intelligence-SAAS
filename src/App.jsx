@@ -1810,10 +1810,10 @@ function AppMain() {
       // Process all unique articles from the 100-article query
       const targetRaw = uniqueRaw;
 
-      // When company profile is active, always run on GROQ 120B
-      const activeProvider = (currentProfile && PROVIDERS.find(p => p.id === 'groq-120b'))
+      // If a specific company profile is selected, prioritize groq-120b; otherwise use the user's chosen provider
+      const hasActiveProfile = selectedProfileId && selectedProfileId !== 'none';
+      const activeProvider = (hasActiveProfile && PROVIDERS.find(p => p.id === 'groq-120b'))
         || PROVIDERS.find(p => p.id === provider)
-        || PROVIDERS.find(p => p.id === 'groq-120b')
         || PROVIDERS[0];
       const locationContext = [...params.cities, ...params.states, ...params.locs].map(l => l.label).join(', ') || 'Global';
 
