@@ -1991,19 +1991,20 @@ function AppMain() {
       // Consolidation Logic: Intelligent Incident-Level Clustering
       const groupedEvents = {};
 
-      // Helper to match existing incident by hazard and overlapping geographical tokens
-      const findMatchingGroupKey = (cls, hazard, regionStr) => {
+      // Helper to match existing incident by hazard and overlapping geographical or title tokens
+      const findMatchingGroupKey = (cls, hazard, regionStr, titleStr) => {
         const normHazard = hazard.toLowerCase().trim();
-        const normTokens = regionStr.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+        const normTokens = `${regionStr} ${titleStr}`.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
         
         for (const [key, grp] of Object.entries(groupedEvents)) {
           if (grp.ai.classification !== cls) continue;
           if ((grp.ai.hazard || '').toLowerCase().trim() !== normHazard) continue;
 
-          const grpTokens = (grp.ai.region || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
-          // Check for shared meaningful location tokens (e.g. "tibet", "china", "california", "arizona")
-          const commonTokens = normTokens.filter(t => grpTokens.includes(t) && !['region', 'province', 'autonomous', 'state', 'county', 'district', 'area', 'near', 'north', 'south', 'east', 'west'].includes(t));
-          if (commonTokens.length > 0) {
+          const grpTokens = `${grp.ai.region || ''} ${grp.title || ''}`.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+          // Check for shared core incident keywords (e.g. "tibet", "china", "california", "arizona", "7.0", "magnitude", "earthquake")
+          const stopwords = ['region', 'province', 'autonomous', 'state', 'county', 'district', 'area', 'near', 'north', 'south', 'east', 'west', 'dead', 'injured', 'hits', 'strikes', 'after', 'with', 'from', 'over'];
+          const commonTokens = normTokens.filter(t => grpTokens.includes(t) && !stopwords.includes(t));
+          if (commonTokens.length >= 1) {
             return key;
           }
         }
@@ -2016,7 +2017,7 @@ function AppMain() {
         const region = (art.ai.region || 'Global').toLowerCase().trim();
         
         // Find existing cluster or create a new unique cluster key
-        const existingKey = findMatchingGroupKey(cls, hazard, region);
+        const existingKey = findMatchingGroupKey(cls, hazard, region, art.title || '');
         const groupKey = existingKey || `${cls}_${hazard}_${region}`;
 
         if (!groupedEvents[groupKey]) {
