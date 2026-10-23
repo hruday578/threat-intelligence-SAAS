@@ -69,26 +69,26 @@ th {
 }
 
 .sidebar-logo-img-small {
-  height: 52px;
-  width: auto;
-  max-width: 100%;
+  height: 42px;
+  width: 42px;
   object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.25));
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.35));
 }
 
 .sidebar-logo-full {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
+  padding-left: 4px;
 }
 
 .sidebar-logo-img-full {
-  height: 110px;
+  height: 48px;
   width: auto;
-  max-width: 100%;
+  max-width: 175px;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.2));
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 
 .sidebar-toggle-btn {

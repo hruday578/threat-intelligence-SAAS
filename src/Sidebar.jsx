@@ -72,11 +72,11 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, e
         <div className="sidebar-logo-area">
           {collapsed ? (
             <div className="sidebar-logo-icon">
-              <img src="/alertem-logo.png" alt="AlertEm" className="sidebar-logo-img-small" />
+              <img src="/alertem-icon.png" alt="ThreatLazer" className="sidebar-logo-img-small" />
             </div>
           ) : (
             <div className="sidebar-logo-full">
-              <img src="/alertem-logo.png" alt="AlertEm" className="sidebar-logo-img-full" />
+              <img src="/alertem-logo-dark.png" alt="ThreatLazer.AI" className="sidebar-logo-img-full" />
             </div>
           )}
         </div>
