@@ -612,7 +612,7 @@ const repairJSONNewlines = (str) => {
 
 
 
-function ConceptInput({ label, concepts = [], onChange }) {
+function ConceptInput({ label, concepts = [], onChange, isDarkMode = false }) {
   const [input, setInput] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -658,24 +658,32 @@ function ConceptInput({ label, concepts = [], onChange }) {
 
   return (
     <div className="relative" style={{ minWidth: 260 }}>
-      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">
-        {label} {concepts.length > 0 && <span className="text-purple-600">({concepts.length})</span>}
+      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+        {label} {concepts.length > 0 && <span className="text-purple-400">({concepts.length})</span>}
       </label>
 
       {/* Selected concept chips */}
       <div
-        className="min-h-[40px] w-full bg-white border border-gray-100 rounded-xl px-2 py-1 flex flex-wrap gap-1 items-center shadow-sm focus-within:border-purple-300 transition-all cursor-text"
+        className={`min-h-[40px] w-full border rounded-xl px-2 py-1 flex flex-wrap gap-1 items-center shadow-sm transition-all cursor-text ${
+          isDarkMode 
+            ? 'bg-slate-800/90 border-slate-700 focus-within:border-purple-500/50' 
+            : 'bg-white border-gray-100 focus-within:border-purple-300'
+        }`}
         onClick={() => setShowDropdown(true)}
       >
         {concepts.map(c => (
           <span
             key={c.uri}
-            className="bg-purple-50 border border-purple-200 text-purple-700 text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap"
+            className={`text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap shadow-sm ${
+              isDarkMode 
+                ? 'bg-purple-950/80 border border-purple-800/60 text-purple-200' 
+                : 'bg-purple-50 border border-purple-200 text-purple-700'
+            }`}
           >
             <span className="text-purple-400"></span> {c.label}
             <button
               onClick={e => { e.stopPropagation(); removeConcept(c.uri); }}
-              className="ml-0.5 text-purple-400 hover:text-purple-700 leading-none"
+              className={`ml-0.5 leading-none ${isDarkMode ? 'text-purple-400 hover:text-purple-200' : 'text-purple-400 hover:text-purple-700'}`}
             >×</button>
           </span>
         ))}
@@ -689,13 +697,17 @@ function ConceptInput({ label, concepts = [], onChange }) {
             if (e.key === 'Escape') setShowDropdown(false);
           }}
           placeholder={concepts.length === 0 ? 'Search concepts...' : 'Add more...'}
-          className="flex-1 bg-transparent border-none text-[10px] font-bold outline-none min-w-[110px] p-1 placeholder-gray-300"
+          className={`flex-1 bg-transparent border-none text-[10px] font-bold outline-none min-w-[110px] p-1 ${
+            isDarkMode ? 'text-white placeholder-slate-400' : 'text-gray-800 placeholder-gray-400'
+          }`}
         />
       </div>
 
       {/* Grouped dropdown */}
       {showDropdown && (
-        <div className="absolute z-[110] left-0 right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden" style={{ maxHeight: 380, overflowY: 'auto', minWidth: 320 }}>
+        <div className={`absolute z-[110] left-0 right-0 mt-1 border rounded-2xl shadow-2xl overflow-hidden ${
+          isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'
+        }`} style={{ maxHeight: 380, overflowY: 'auto', minWidth: 320 }}>
           {/* Header */}
           <div className="sticky top-0 bg-purple-600 px-3 py-2 flex items-center justify-between z-10">
             <span className="text-[9px] font-black text-white uppercase tracking-widest">
@@ -708,11 +720,13 @@ function ConceptInput({ label, concepts = [], onChange }) {
             <div className="p-4">
               <button
                 onClick={addCustom}
-                className="w-full text-left px-3 py-2 text-[10px] rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                className={`w-full text-left px-3 py-2 text-[10px] rounded-lg transition-colors flex items-center gap-2 ${
+                  isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-purple-50'
+                }`}
               >
                 <span className="text-purple-400 text-[8px]"></span>
                 <div>
-                  <span className="font-black text-purple-700">{input.trim()}</span>
+                  <span className={`font-black ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>{input.trim()}</span>
                   <span className="text-[8px] text-gray-400 ml-2">(add as custom concept)</span>
                 </div>
               </button>
@@ -721,8 +735,10 @@ function ConceptInput({ label, concepts = [], onChange }) {
             filteredGroups.map(g => (
               <div key={g.group}>
                 {/* Group header */}
-                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 sticky" style={{ top: 33 }}>
-                  <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{g.group}</span>
+                <div className={`px-3 py-1.5 border-b sticky ${
+                  isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-gray-50 border-gray-100 text-gray-500'
+                }`} style={{ top: 33 }}>
+                  <span className="text-[8px] font-black uppercase tracking-widest">{g.group}</span>
                 </div>
                 {/* Concepts in this group */}
                 <div className="py-1">
@@ -730,10 +746,12 @@ function ConceptInput({ label, concepts = [], onChange }) {
                     <button
                       key={c.uri}
                       onClick={() => addConcept(c)}
-                      className="w-full text-left px-4 py-2 text-[10px] hover:bg-purple-50 transition-colors flex items-center gap-2 group"
+                      className={`w-full text-left px-4 py-2 text-[10px] transition-colors flex items-center gap-2 group ${
+                        isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-purple-50'
+                      }`}
                     >
-                      <span className="text-purple-300 group-hover:text-purple-500 text-[8px] shrink-0"></span>
-                      <span className="font-semibold text-gray-700 group-hover:text-purple-700">{c.label}</span>
+                      <span className="text-purple-400 text-[8px] shrink-0"></span>
+                      <span className={`font-semibold ${isDarkMode ? 'text-slate-200 group-hover:text-purple-300' : 'text-gray-700 group-hover:text-purple-700'}`}>{c.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1074,7 +1092,7 @@ function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = 
 }
 
 //  Search Query Bar (visual display of active filters) 
-function SearchQueryBar({ keywords, concepts, locs, states, cities }) {
+function SearchQueryBar({ keywords, concepts, locs, states, cities, isDarkMode = false }) {
   const groups = [];
 
   if (keywords && keywords.length > 0) {
@@ -1090,38 +1108,42 @@ function SearchQueryBar({ keywords, concepts, locs, states, cities }) {
 
   if (groups.length === 0) return null;
 
-  const colorMap = {
+  const colorMap = isDarkMode ? {
+    keyword: { bg: 'bg-orange-950/60', border: 'border-orange-800/80', text: 'text-orange-300', icon: '' },
+    concept: { bg: 'bg-purple-950/60', border: 'border-purple-800/80', text: 'text-purple-300', icon: '' },
+    location: { bg: 'bg-emerald-950/60', border: 'border-emerald-800/80', text: 'text-emerald-300', icon: '' },
+  } : {
     keyword: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', icon: '' },
     concept: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: '' },
     location: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: '' },
   };
 
   return (
-    <div className="mt-3 pt-3 border-t border-gray-50">
-      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Your search query</span>
+    <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-slate-800' : 'border-gray-50'}`}>
+      <span className={`text-[9px] font-black uppercase tracking-widest block mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Your search query</span>
       <div className="flex flex-wrap items-center gap-1.5">
         {groups.map((group, groupIdx) => (
           <React.Fragment key={`group-${groupIdx}`}>
-            {groupIdx > 0 && <span className="text-[8px] font-black text-gray-400 uppercase mx-1">AND</span>}
-            {group.length > 1 && <span className="text-[12px] font-light text-gray-300">(</span>}
+            {groupIdx > 0 && <span className={`text-[8px] font-black uppercase mx-1 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>AND</span>}
+            {group.length > 1 && <span className={`text-[12px] font-light ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>(</span>}
             {group.map((tok, i) => {
               const c = colorMap[tok.type];
               return (
                 <React.Fragment key={i}>
-                  {i > 0 && <span className="text-[8px] font-black text-gray-400 uppercase mx-1">OR</span>}
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black ${c.bg} ${c.border} ${c.text} whitespace-nowrap`}>
+                  {i > 0 && <span className={`text-[8px] font-black uppercase mx-1 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>OR</span>}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black ${c.bg} ${c.border} ${c.text} whitespace-nowrap shadow-sm`}>
                     <span className="opacity-60">{c.icon}</span> {tok.label}
                   </span>
                 </React.Fragment>
               );
             })}
-            {group.length > 1 && <span className="text-[12px] font-light text-gray-300">)</span>}
+            {group.length > 1 && <span className={`text-[12px] font-light ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>)</span>}
           </React.Fragment>
         ))}
       </div>
       <div className="flex items-center gap-3 mt-2 flex-wrap">
-        {concepts && concepts.length > 0 && <span className="text-[8px] text-purple-500 font-bold"> Concepts match ANY of the selected Wikipedia topics</span>}
-        {keywords && keywords.length > 0 && <span className="text-[8px] text-orange-500 font-bold"> Keywords match article text</span>}
+        {concepts && concepts.length > 0 && <span className={`text-[8px] font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-500'}`}> Concepts match ANY of the selected Wikipedia topics</span>}
+        {keywords && keywords.length > 0 && <span className={`text-[8px] font-bold ${isDarkMode ? 'text-orange-400' : 'text-orange-500'}`}> Keywords match article text</span>}
       </div>
     </div>
   );
@@ -1184,8 +1206,20 @@ function getRiskScoreMeta(s) {
 function AppMain() {
   const { user, session, organization, member, loading: authLoading, signOut } = useAuth();
   const [configExpanded, setConfigExpanded] = useState(true);
-  const [newsKey, setNewsKey] = useState(() => import.meta.env.VITE_NEWSAPI_KEY || '');
-  const [aiKey, setAiKey] = useState(() => import.meta.env.VITE_GROQ_API_KEY || '');
+  const [newsKey, setNewsKey] = useState(() => {
+    try {
+      return localStorage.getItem('threatlazer_news_key') || import.meta.env.VITE_NEWSAPI_KEY || '';
+    } catch {
+      return import.meta.env.VITE_NEWSAPI_KEY || '';
+    }
+  });
+  const [aiKey, setAiKey] = useState(() => {
+    try {
+      return localStorage.getItem('threatlazer_groq_key') || import.meta.env.VITE_GROQ_API_KEY || '';
+    } catch {
+      return import.meta.env.VITE_GROQ_API_KEY || '';
+    }
+  });
   const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -2707,25 +2741,29 @@ function AppMain() {
                   >
                     {autoPilot ? `Stop Auto-Pilot (${Math.floor(timeUntilScan / 60)}:${(timeUntilScan % 60).toString().padStart(2, '0')})` : 'Start Auto-Pilot'}
                   </button>
-                  <div className="flex items-center gap-2 bg-red-50/50 border border-red-100 rounded-lg p-1 px-2.5">
-                    <span className="text-[9px] font-black uppercase text-red-600">Company Profile ({savedProfiles.length}):</span>
+                  <div className={`flex items-center gap-2 border rounded-lg p-1 px-2.5 ${
+                    isDarkMode ? 'bg-red-950/60 border-red-900/60' : 'bg-red-50/50 border-red-100'
+                  }`}>
+                    <span className={`text-[9px] font-black uppercase ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>Company Profile ({savedProfiles.length}):</span>
                     <select
                       value={selectedProfileId}
                       onChange={e => handleSelectProfile(e.target.value)}
-                      className="bg-transparent text-[10px] font-black text-red-700 outline-none cursor-pointer max-w-[170px] truncate"
+                      className={`bg-transparent text-[10px] font-black outline-none cursor-pointer max-w-[170px] truncate ${
+                        isDarkMode ? 'text-red-300' : 'text-red-700'
+                      }`}
                       disabled={savedProfiles.length === 0}
                     >
                       {savedProfiles.length === 0 ? (
-                        <option value="" className="text-gray-400 font-semibold text-[10px]">
+                        <option value="" className={`${isDarkMode ? 'bg-slate-900 text-slate-400' : 'text-gray-400'} font-semibold text-[10px]`}>
                           No profiles saved
                         </option>
                       ) : (
                         <>
-                          <option value="none" className="text-gray-400 font-semibold text-[10px]">
+                          <option value="none" className={`${isDarkMode ? 'bg-slate-900 text-slate-400' : 'text-gray-400'} font-semibold text-[10px]`}>
                             None
                           </option>
                           {savedProfiles.map(p => (
-                            <option key={p.id} value={p.id} className="text-gray-700 font-semibold text-[10px]">
+                            <option key={p.id} value={p.id} className={`${isDarkMode ? 'bg-slate-900 text-slate-100' : 'text-gray-700'} font-semibold text-[10px]`}>
                               {p.profile?.company_name || 'Unnamed'} ({p.risk_score || 0}/100)
                             </option>
                           ))}
@@ -2741,37 +2779,59 @@ function AppMain() {
               {configExpanded && (
                 <>
                   <div className="flex items-start gap-4 flex-wrap">
-                    <TagInput label="Target Hazards" tags={keywords} onAdd={t => setKeywords([...new Set([...keywords, t])])} onRemove={t => setKeywords(keywords.filter(k => k !== t))} suggestionsLibrary={TACTICAL_LIBRARY} />
-                    <ConceptInput label=" Concepts" concepts={params.concepts} onChange={v => setParams(p => ({ ...p, concepts: v }))} />
-                    <MultiSelect label="Source" options={TOP_SOURCES} selected={params.prefSrc} onChange={v => setParams(p => ({ ...p, prefSrc: v }))} placeholder="Any Source" />
-                    <MultiSelect label="Country" options={countryList} selected={params.locs} onChange={v => setParams(p => ({ ...p, locs: v }))} placeholder="Global" />
-                    <MultiSelect label="State / Region" options={stateList} selected={params.states} onChange={v => setParams(p => ({ ...p, states: v }))} placeholder="All Regions" disabled={!params.locs.length} />
-                    <MultiSelect label="City" options={cityList} selected={params.cities} onChange={v => setParams(p => ({ ...p, cities: v }))} placeholder="All Cities" disabled={!params.states.length} />
+                    <TagInput label="Target Hazards" tags={keywords} onAdd={t => setKeywords([...new Set([...keywords, t])])} onRemove={t => setKeywords(keywords.filter(k => k !== t))} suggestionsLibrary={TACTICAL_LIBRARY} isDarkMode={isDarkMode} />
+                    <ConceptInput label=" Concepts" concepts={params.concepts} onChange={v => setParams(p => ({ ...p, concepts: v }))} isDarkMode={isDarkMode} />
+                    <MultiSelect label="Source" options={TOP_SOURCES} selected={params.prefSrc} onChange={v => setParams(p => ({ ...p, prefSrc: v }))} placeholder="Any Source" isDarkMode={isDarkMode} />
+                    <MultiSelect label="Country" options={countryList} selected={params.locs} onChange={v => setParams(p => ({ ...p, locs: v }))} placeholder="Global" isDarkMode={isDarkMode} />
+                    <MultiSelect label="State / Region" options={stateList} selected={params.states} onChange={v => setParams(p => ({ ...p, states: v }))} placeholder="All Regions" disabled={!params.locs.length} isDarkMode={isDarkMode} />
+                    <MultiSelect label="City" options={cityList} selected={params.cities} onChange={v => setParams(p => ({ ...p, cities: v }))} placeholder="All Cities" disabled={!params.states.length} isDarkMode={isDarkMode} />
                     <div className="w-32">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Duration</label>
-                      <select value={params.dur} onChange={e => setParams(p => ({ ...p, dur: e.target.value }))} className="h-10 w-full bg-white border border-gray-100 text-[10px] font-black rounded-xl px-3 outline-none cursor-pointer">
-                        {DURATIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Duration</label>
+                      <select 
+                        value={params.dur} 
+                        onChange={e => setParams(p => ({ ...p, dur: e.target.value }))} 
+                        className={`h-10 w-full border text-[10px] font-black rounded-xl px-3 outline-none cursor-pointer transition-all ${
+                          isDarkMode 
+                            ? 'bg-slate-800/90 border-slate-700 text-slate-100 hover:border-slate-600' 
+                            : 'bg-white border-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {DURATIONS.map(d => <option key={d.value} value={d.value} className={isDarkMode ? 'bg-slate-900 text-slate-100' : ''}>{d.label}</option>)}
                       </select>
                     </div>
                     <div className="w-40">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Sort Results By</label>
+                      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Sort Results By</label>
                       <select
                         value={sortBy}
                         onChange={e => setSortBy(e.target.value)}
-                        className="h-10 w-full bg-white border border-gray-100 text-[10px] font-black rounded-xl px-3 outline-none cursor-pointer"
+                        className={`h-10 w-full border text-[10px] font-black rounded-xl px-3 outline-none cursor-pointer transition-all ${
+                          isDarkMode 
+                            ? 'bg-slate-800/90 border-slate-700 text-slate-100 hover:border-slate-600' 
+                            : 'bg-white border-gray-100 text-gray-800'
+                        }`}
                       >
-                        <option value="date"> Date</option>
-                        <option value="rel"> Relevance</option>
-                        <option value="socialScore"> Social Shares</option>
+                        <option value="date" className={isDarkMode ? 'bg-slate-900 text-slate-100' : ''}> Date</option>
+                        <option value="rel" className={isDarkMode ? 'bg-slate-900 text-slate-100' : ''}> Relevance</option>
+                        <option value="socialScore" className={isDarkMode ? 'bg-slate-900 text-slate-100' : ''}> Social Shares</option>
                       </select>
                     </div>
                     <div className="w-56">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Target Zones (Local)</label>
-                      <input type="text" value={zonesInput} onChange={e => setZonesInput(e.target.value)} placeholder="e.g. Bangalore" className="h-10 w-full bg-white border border-gray-100 text-[10px] font-bold rounded-xl px-3 outline-none" />
+                      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Target Zones (Local)</label>
+                      <input 
+                        type="text" 
+                        value={zonesInput} 
+                        onChange={e => setZonesInput(e.target.value)} 
+                        placeholder="e.g. Bangalore" 
+                        className={`h-10 w-full border text-[10px] font-bold rounded-xl px-3 outline-none transition-all ${
+                          isDarkMode 
+                            ? 'bg-slate-800/90 border-slate-700 text-slate-100 placeholder-slate-400 focus:border-red-500/50' 
+                            : 'bg-white border-gray-100 text-gray-800 placeholder-gray-400 focus:border-red-500/20'
+                        }`} 
+                      />
                     </div>
                     <div className="w-36">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">
-                        Search Radius (km) {radius > 0 && <span className="text-red-600"> {radius}km</span>}
+                      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                        Search Radius (km) {radius > 0 && <span className="text-red-500"> {radius}km</span>}
                       </label>
                       <input
                         id="radius-input"
@@ -2780,14 +2840,17 @@ function AppMain() {
                         onChange={e => setRadius(Math.min(500, Math.max(0, Number(e.target.value))))}
                         placeholder="0 = disabled"
                         min="0" max="500" step="25"
-                        className={`h-10 w-full bg-white border text-[10px] font-bold rounded-xl px-3 outline-none transition-all ${radius > 0 ? 'border-red-400 text-red-600' : 'border-gray-100'
-                          }`}
+                        className={`h-10 w-full border text-[10px] font-bold rounded-xl px-3 outline-none transition-all ${
+                          radius > 0 
+                            ? 'border-red-400 text-red-500' 
+                            : (isDarkMode ? 'bg-slate-800/90 border-slate-700 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-100 text-gray-800 placeholder-gray-400')
+                        }`}
                       />
                       {expandedZones.length > 1 && (
-                        <p className="text-[7px] font-bold text-green-600 mt-1 ml-1">{expandedZones.length} zones active</p>
+                        <p className="text-[7px] font-bold text-green-500 mt-1 ml-1">{expandedZones.length} zones active</p>
                       )}
                     </div>
-                    <button onClick={() => handleExecute(false)} disabled={loading} className="h-10 px-8 mt-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl shadow-red-100 hover:bg-red-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 min-w-[150px] justify-center">
+                    <button onClick={() => handleExecute(false)} disabled={loading} className="h-10 px-8 mt-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl shadow-red-950/40 hover:bg-red-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 min-w-[150px] justify-center">
                       {loading ? (
                         <span className="flex items-center gap-2">
                           <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -2805,16 +2868,49 @@ function AppMain() {
                     locs={params.locs}
                     states={params.states}
                     cities={params.cities}
+                    isDarkMode={isDarkMode}
                   />
 
-                  <div className="flex items-center gap-4 pt-2 border-t border-gray-50 overflow-x-auto pb-1">
-                    <input type="password" value={newsKey} onChange={e => setNewsKey(e.target.value)} placeholder="NewsAPI Token" className="min-w-[150px] flex-1 h-10 bg-gray-50/50 border border-gray-100 rounded-xl px-4 text-[10px] font-mono outline-none" />
-                    <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shrink-0">
+                  <div className={`flex items-center gap-4 pt-2 border-t overflow-x-auto pb-1 ${isDarkMode ? 'border-slate-800' : 'border-gray-50'}`}>
+                    <input 
+                      type="password" 
+                      value={newsKey} 
+                      onChange={e => {
+                        setNewsKey(e.target.value);
+                        try { localStorage.setItem('threatlazer_news_key', e.target.value); } catch (_) {}
+                      }} 
+                      placeholder="NewsAPI Token" 
+                      className={`min-w-[150px] flex-1 h-10 border rounded-xl px-4 text-[10px] font-mono outline-none ${
+                        isDarkMode ? 'bg-slate-800/90 border-slate-700 text-slate-100 placeholder-slate-400' : 'bg-gray-50/50 border-gray-100 text-gray-800'
+                      }`} 
+                    />
+                    <div className={`flex gap-1 p-1 rounded-xl shrink-0 ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
                       {PROVIDERS.map(p => (
-                        <button key={p.id} onClick={() => setProvider(p.id)} className={`px-4 h-8 text-[8px] font-black uppercase rounded-lg transition-all ${provider === p.id ? 'bg-white text-red-600 shadow-md' : 'text-gray-400 hover:bg-gray-200'}`}>{p.label}</button>
+                        <button 
+                          key={p.id} 
+                          onClick={() => setProvider(p.id)} 
+                          className={`px-4 h-8 text-[8px] font-black uppercase rounded-lg transition-all ${
+                            provider === p.id 
+                              ? (isDarkMode ? 'bg-slate-900 text-red-400 shadow-md border border-slate-700' : 'bg-white text-red-600 shadow-md') 
+                              : (isDarkMode ? 'text-slate-400 hover:bg-slate-700' : 'text-gray-400 hover:bg-gray-200')
+                          }`}
+                        >
+                          {p.label}
+                        </button>
                       ))}
                     </div>
-                    <input type="password" value={aiKey} onChange={e => setAiKey(e.target.value)} placeholder={`${PROVIDERS.find(p => p.id === provider)?.label} API Key`} className="min-w-[150px] flex-[1.5] h-10 bg-gray-50/50 border border-gray-100 rounded-xl px-4 text-[10px] font-mono outline-none" />
+                    <input 
+                      type="password" 
+                      value={aiKey} 
+                      onChange={e => {
+                        setAiKey(e.target.value);
+                        try { localStorage.setItem('threatlazer_groq_key', e.target.value); } catch (_) {}
+                      }} 
+                      placeholder={`${PROVIDERS.find(p => p.id === provider)?.label} API Key`} 
+                      className={`min-w-[150px] flex-[1.5] h-10 border rounded-xl px-4 text-[10px] font-mono outline-none ${
+                        isDarkMode ? 'bg-slate-800/90 border-slate-700 text-slate-100 placeholder-slate-400' : 'bg-gray-50/50 border-gray-100 text-gray-800'
+                      }`} 
+                    />
                   </div>
                 </>
               )}
