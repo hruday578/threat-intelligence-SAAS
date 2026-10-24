@@ -400,17 +400,17 @@ const ENHANCED_REGIONS = {
 };
 
 //  Branding 
-const Logo = ({ className = "h-16" }) => (
+const Logo = ({ className = "h-16", isDarkMode = false }) => (
   <img
-    src="/alertem-logo.png"
-    alt="AlertEm Logo"
-    className={`${className} object-contain`}
+    src={isDarkMode ? "/monochrome_logo.png" : "/alertem-logo.png"}
+    alt="ThreatLazer.AI Logo"
+    className={`${className} object-contain transition-all`}
   />
 );
 
 //  Components 
 
-function MultiSelect({ label, options = [], selected = [], onChange, placeholder, disabled }) {
+function MultiSelect({ label, options = [], selected = [], onChange, placeholder, disabled, isDarkMode = false }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const filtered = (options || []).filter(o =>
@@ -419,12 +419,23 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
   );
   return (
     <div className={`relative flex-1 min-w-[140px] ${disabled ? 'opacity-40' : ''}`}>
-      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} {selected.length > 0 && <span className="text-red-600">({selected.length})</span>}</label>
-      <div onClick={() => !disabled && setOpen(!open)} className="h-10 w-full bg-white border border-gray-100 rounded-xl px-3 flex items-center justify-between cursor-pointer hover:border-red-500/20 transition-all shadow-sm overflow-hidden text-[10px] font-bold">
+      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+        {label} {selected.length > 0 && <span className="text-red-500">({selected.length})</span>}
+      </label>
+      <div 
+        onClick={() => !disabled && setOpen(!open)} 
+        className={`h-10 w-full border rounded-xl px-3 flex items-center justify-between cursor-pointer transition-all shadow-sm overflow-hidden text-[10px] font-bold ${
+          isDarkMode 
+            ? 'bg-slate-800/90 border-slate-700 text-slate-100 hover:border-red-500/40' 
+            : 'bg-white border-gray-100 text-gray-800 hover:border-red-500/20'
+        }`}
+      >
         <div className="flex gap-1 overflow-hidden items-center">
-          {!selected.length ? <span className="text-gray-300">{placeholder}</span> :
+          {!selected.length ? <span className={isDarkMode ? 'text-slate-400' : 'text-gray-400'}>{placeholder}</span> :
             selected.map(s => (
-              <span key={s.uri || s.label} className="bg-red-50 text-red-600 text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 whitespace-nowrap">
+              <span key={s.uri || s.label} className={`text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 whitespace-nowrap ${
+                isDarkMode ? 'bg-red-950/80 text-red-300 border border-red-800/60' : 'bg-red-50 text-red-600'
+              }`}>
                 {s.label}
                 <button
                   type="button"
@@ -432,7 +443,7 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
                     e.stopPropagation();
                     onChange(selected.filter(item => (item.uri || item.label) !== (s.uri || s.label)));
                   }}
-                  className="text-red-400 hover:text-red-700 text-xs leading-none"
+                  className={`${isDarkMode ? 'text-red-400 hover:text-red-200' : 'text-red-400 hover:text-red-700'} text-xs leading-none`}
                 >
                   &times;
                 </button>
@@ -440,17 +451,40 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
             ))
           }
         </div>
-        <svg className={`w-3 h-3 shrink-0 text-gray-300 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+        <svg className={`w-3 h-3 shrink-0 transition-transform ${isDarkMode ? 'text-slate-400' : 'text-gray-300'} ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
       </div>
       {open && (
-        <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-60 overflow-y-auto p-1">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full p-2 text-[10px] border-b border-gray-50 outline-none mb-1" onClick={e => e.stopPropagation()} />
-          {filtered.map(opt => (
-            <button key={opt.uri || opt.label} onClick={() => {
-              const exists = selected.find(s => (s.uri || s.label) === (opt.uri || opt.label));
-              onChange(exists ? selected.filter(s => (s.uri || s.label) !== (opt.uri || opt.label)) : [...selected, opt]);
-            }} className={`w-full text-left px-3 py-2 text-[10px] rounded-lg hover:bg-gray-50 transition-colors ${selected.find(s => (s.uri || s.label) === (opt.uri || opt.label)) ? 'text-red-600 font-bold bg-red-50' : 'text-gray-600'}`}>{opt.label}</button>
-          ))}
+        <div className={`absolute z-[100] w-full mt-1 border rounded-xl shadow-2xl max-h-60 overflow-y-auto p-1 ${
+          isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'
+        }`}>
+          <input 
+            type="text" 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            placeholder="Search..." 
+            className={`w-full p-2 text-[10px] border-b outline-none mb-1 ${
+              isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400' : 'bg-white border-gray-50 text-gray-800 placeholder-gray-400'
+            }`} 
+            onClick={e => e.stopPropagation()} 
+          />
+          {filtered.map(opt => {
+            const isSelected = selected.some(s => (s.uri || s.label) === (opt.uri || opt.label));
+            return (
+              <button 
+                key={opt.uri || opt.label} 
+                onClick={() => {
+                  onChange(isSelected ? selected.filter(s => (s.uri || s.label) !== (opt.uri || opt.label)) : [...selected, opt]);
+                }} 
+                className={`w-full text-left px-3 py-2 text-[10px] rounded-lg transition-colors ${
+                  isSelected 
+                    ? (isDarkMode ? 'text-red-400 font-bold bg-red-950/60' : 'text-red-600 font-bold bg-red-50') 
+                    : (isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-50')
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
       )}
       {open && <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />}
@@ -458,7 +492,7 @@ function MultiSelect({ label, options = [], selected = [], onChange, placeholder
   );
 }
 
-function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [] }) {
+function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [], isDarkMode = false }) {
   const safeTags = Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(s=>s.trim()).filter(Boolean) : []);
   const [input, setInput] = useState('');
   const [showSuggest, setShowSuggest] = useState(false);
@@ -466,10 +500,14 @@ function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [] }
   const addTag = (t) => { if (t && !safeTags.includes(t)) onAdd(t); setInput(''); setShowSuggest(false); };
   return (
     <div className="flex-1 min-w-[200px] relative">
-      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">{label} ({safeTags.length})</label>
-      <div className="min-h-[40px] w-full bg-white border border-gray-100 rounded-xl px-2 py-1 flex flex-wrap gap-1 items-center shadow-sm focus-within:border-red-500/20 transition-all">
+      <label className={`text-[9px] font-black uppercase tracking-widest ml-1 mb-1 block ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{label} ({safeTags.length})</label>
+      <div className={`min-h-[40px] w-full border rounded-xl px-2 py-1 flex flex-wrap gap-1 items-center shadow-sm transition-all ${
+        isDarkMode 
+          ? 'bg-slate-800/90 border-slate-700 focus-within:border-red-500/50' 
+          : 'bg-white border-gray-100 focus-within:border-red-500/20'
+      }`}>
         {safeTags.map(t => (
-          <span key={t} className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1">
+          <span key={t} className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
             {t} <button onClick={() => onRemove(t)} className="hover:text-red-200">×</button>
           </span>
         ))}
@@ -477,13 +515,19 @@ function TagInput({ label, tags = [], onAdd, onRemove, suggestionsLibrary = [] }
           type="text" value={input} onChange={e => { setInput(e.target.value); setShowSuggest(true); }}
           onFocus={() => setShowSuggest(true)}
           onKeyDown={e => { if (e.key === 'Enter') addTag(input.trim()); }}
-          placeholder="Type & Enter..." className="flex-1 bg-transparent border-none text-[10px] font-bold outline-none min-w-[60px] p-1"
+          placeholder="Type & Enter..." className={`flex-1 bg-transparent border-none text-[10px] font-bold outline-none min-w-[60px] p-1 ${
+            isDarkMode ? 'text-white placeholder-slate-400' : 'text-gray-800 placeholder-gray-400'
+          }`}
         />
       </div>
       {showSuggest && input.trim() && suggestions.length > 0 && (
-        <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl p-1 max-h-40 overflow-y-auto">
+        <div className={`absolute z-[110] w-full mt-1 border rounded-xl shadow-2xl p-1 max-h-40 overflow-y-auto ${
+          isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'
+        }`}>
           {suggestions.map(s => (
-            <button key={s} onClick={() => addTag(s)} className="w-full text-left px-3 py-1.5 text-[9px] font-black uppercase text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">{s}</button>
+            <button key={s} onClick={() => addTag(s)} className={`w-full text-left px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${
+              isDarkMode ? 'text-slate-300 hover:text-red-400 hover:bg-slate-800' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+            }`}>{s}</button>
           ))}
         </div>
       )}
@@ -780,7 +824,7 @@ function MiniMapAutoFit({ markers }) {
   return null;
 }
 
-function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = [] }) {
+function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = [], isDarkMode = false }) {
   const { markers, companySites, allPoints } = useMemo(() => {
     const validArticles = (articles || []).filter(a => a?.ai?.classification !== 'IRRELEVANT');
 
@@ -844,37 +888,51 @@ function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = 
 
   return (
     <div
-      className="relative rounded-3xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition-all cursor-pointer group"
+      className={`relative rounded-3xl overflow-hidden border shadow-sm hover:shadow-xl transition-all cursor-pointer group ${
+        isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-gray-200 bg-white'
+      }`}
       style={{ minHeight: '320px', height: '100%' }}
       onClick={onNavigateToMaps}
     >
       {/* Header overlay */}
       <div className="absolute top-0 left-0 right-0 z-[1000] p-4 pb-2 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 70%, transparent 100%)' }}>
+        style={{
+          background: isDarkMode 
+            ? 'linear-gradient(to bottom, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.5) 70%, transparent 100%)'
+            : 'linear-gradient(to bottom, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.7) 70%, transparent 100%)'
+        }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <h2 className="text-xs font-black text-white uppercase tracking-widest">Global Threat & Facility Map</h2>
+            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+            <h2 className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              Global Threat & Facility Map
+            </h2>
           </div>
           <div className="flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[8px] font-black text-white/60 uppercase tracking-wider">Open Full Map</span>
-            <svg className="w-3 h-3 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            <span className={`text-[8px] font-black uppercase tracking-wider ${isDarkMode ? 'text-white/70' : 'text-slate-600'}`}>
+              Open Full Map
+            </span>
+            <svg className={`w-3 h-3 ${isDarkMode ? 'text-white/70' : 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
           </div>
         </div>
         {(markers.length > 0 || companySites.length > 0) && (
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             {companySites.length > 0 && (
-              <span className="text-[8px] font-bold text-cyan-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" /> {companySites.length} Facilities
+              <span className={`text-[8px] font-bold flex items-center gap-1 ${isDarkMode ? 'text-cyan-400' : 'text-teal-700'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-cyan-400' : 'bg-teal-600'}`} /> {companySites.length} Facilities
               </span>
             )}
-            <span className="text-[8px] font-bold text-red-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {markers.reduce((s, m) => s + m.alerts, 0)} Active Alerts
+            <span className={`text-[8px] font-bold flex items-center gap-1 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600" /> {markers.reduce((s, m) => s + m.alerts, 0)} Active Alerts
             </span>
-            <span className="text-[8px] font-bold text-blue-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {markers.reduce((s, m) => s + m.reports, 0)} Reports
+            <span className={`text-[8px] font-bold flex items-center gap-1 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> {markers.reduce((s, m) => s + m.reports, 0)} Reports
             </span>
-            <span className="text-[8px] font-bold text-white/40">{markers.length} Threat Zones</span>
+            <span className={`text-[8px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              {markers.length} Threat Zones
+            </span>
           </div>
         )}
       </div>
@@ -891,14 +949,23 @@ function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = 
         attributionControl={false}
         className="z-0"
       >
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri"
-        />
-        <TileLayer
-          url="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
-          opacity={1}
-        />
+        {isDarkMode ? (
+          <>
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri"
+            />
+            <TileLayer
+              url="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+              opacity={1}
+            />
+          </>
+        ) : (
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+            attribution="Tiles &copy; Esri"
+          />
+        )}
         <MiniMapAutoFit markers={allPoints} />
 
         {/* Company Sites */}
@@ -1121,6 +1188,14 @@ function AppMain() {
   const [aiKey, setAiKey] = useState(() => import.meta.env.VITE_GROQ_API_KEY || '');
   const [provider, setProvider] = useState('groq-120b');
   const [keywords, setKeywords] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem('threatlazer_theme') === 'dark';
+    } catch {
+      return false;
+    }
+  });
+  const [mapsTheme, setMapsTheme] = useState(() => (localStorage.getItem('threatlazer_theme') === 'dark' ? 'dark' : 'light'));
   const [zonesInput, setZonesInput] = useState('');
   const [params, setParams] = useState({ cats: [], locs: [], states: [], cities: [], dur: '30d', prefSrc: [], concepts: [] });
   const [sortBy, setSortBy] = useState('date');
@@ -2197,13 +2272,16 @@ function AppMain() {
   };
 
   return (
-    <div className="h-screen bg-white flex font-sans overflow-hidden text-gray-900">
+    <div className={`h-screen flex font-sans overflow-hidden transition-colors ${
+      isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-white text-gray-900'
+    }`}>
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         errorCount={systemLogs.filter(l => l.type === 'ERROR').length}
+        isDarkMode={isDarkMode}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -2224,9 +2302,10 @@ function AppMain() {
             targetZone={zonesInput}
             radius={radius}
             companyLocations={currentProfile?.locations || []}
+            initialMapStyle={mapsTheme}
           />
         )}
-        {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} />}
+        {activePage === 'employees' && <EmployeesPage employees={employees} setEmployees={setEmployees} isDarkMode={isDarkMode} />}
         {activePage === 'risk-assessment' && (
           <RiskAssessmentPage
             key={riskAssessmentKey}
@@ -2234,12 +2313,14 @@ function AppMain() {
             initialTab={riskAssessmentInitialTab}
             provider="groq-120b"
             aiKey={aiKey}
+            isDarkMode={isDarkMode}
           />
         )}
-        {activePage === 'earthquake-response' && <EarthquakeResponsePage activeArticle={activeArticle} onNavigate={setActivePage} />}
+        {activePage === 'earthquake-response' && <EarthquakeResponsePage activeArticle={activeArticle} onNavigate={setActivePage} isDarkMode={isDarkMode} />}
         {activePage === 'system-logs' && (
           <SystemLogsPage
             logs={systemLogs}
+            isDarkMode={isDarkMode}
             onClearLogs={() => {
               setSystemLogs([]);
               try { localStorage.removeItem('alertem_system_logs'); } catch (_) {}
@@ -2247,13 +2328,19 @@ function AppMain() {
           />
         )}
         {(activePage === 'dashboard' || activePage === 'explorer') && <>
-          <header className="px-8 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+          <header className={`px-8 py-4 border-b flex items-center justify-between shrink-0 transition-colors ${
+            isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'
+          }`}>
             <div className="flex items-center gap-6">
-              <Logo className="h-16" />
+              <Logo className="h-16" isDarkMode={isDarkMode} />
               {organization && (
-                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full border ${
+                  isDarkMode ? 'bg-red-950/40 border-red-900/60' : 'bg-red-50 border-red-100'
+                }`}>
                   <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                  <span className="text-[10px] font-black text-red-700 uppercase tracking-wider">{organization.name}</span>
+                  <span className={`text-[10px] font-black uppercase tracking-wider ${
+                    isDarkMode ? 'text-red-400' : 'text-red-700'
+                  }`}>{organization.name}</span>
                   <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-600 text-white uppercase">{organization.plan || 'Free'}</span>
                 </div>
               )}
@@ -2265,35 +2352,79 @@ function AppMain() {
                   <span className="text-[8px] font-black text-red-600 uppercase tracking-widest truncate" title={error}>{error}</span>
                 </div>
               )}
+              {/* Light / Dark Mode Toggle */}
+              <button
+                onClick={() => {
+                  const nextTheme = !isDarkMode;
+                  setIsDarkMode(nextTheme);
+                  setMapsTheme(nextTheme ? 'dark' : 'light');
+                  try {
+                    localStorage.setItem('threatlazer_theme', nextTheme ? 'dark' : 'light');
+                  } catch (_) {}
+                }}
+                className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${
+                  isDarkMode
+                    ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700'
+                    : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100'
+                }`}
+                title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+              >
+                {isDarkMode ? (
+                  /* Sun icon */
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  /* Moon icon */
+                  <svg className="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+
               <button 
                 onClick={() => handleExecute()}
                 disabled={loading}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isDarkMode
+                    ? 'bg-slate-800 border-slate-700 text-gray-300 hover:text-red-400 hover:bg-slate-700'
+                    : 'bg-gray-50 border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200'
+                }`}
                 title="Refresh Analysis"
               >
                 <svg className={`w-4 h-4 ${loading ? 'animate-spin text-red-600' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="text-right hidden sm:block pl-2 border-l border-gray-100">
-                <p className="text-[10px] font-black text-gray-900 leading-none">{user?.email}</p>
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{member?.role || 'Analyst'}</p>
+              <div className={`text-right hidden sm:block pl-2 border-l ${
+                isDarkMode ? 'border-slate-800' : 'border-gray-100'
+              }`}>
+                <p className={`text-[11px] font-black leading-none ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user?.email}</p>
+                <p className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{member?.role || 'Analyst'}</p>
               </div>
-              <button onClick={() => { addLog('AUTH', 'User Signed Out', 'Operational analyst session ended'); signOut(); }} className="text-[10px] font-black text-gray-400 hover:text-red-600 uppercase tracking-widest px-3 py-1.5 bg-gray-50 hover:bg-red-50 border border-gray-100 hover:border-red-200 rounded-xl transition-all">Sign Out</button>
+              <button onClick={() => { addLog('AUTH', 'User Signed Out', 'Operational analyst session ended'); signOut(); }} className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border rounded-xl transition-all ${
+                isDarkMode 
+                  ? 'bg-slate-800 hover:bg-red-950/60 border-slate-700 hover:border-red-800 text-slate-200 hover:text-red-400' 
+                  : 'bg-gray-50 hover:bg-red-50 border-gray-100 hover:border-red-200 text-gray-400 hover:text-red-600'
+              }`}>Sign Out</button>
             </div>
           </header>
 
           {activePage === 'dashboard' && dashboardView === 'overview' ? (
-            <div className="flex-1 p-8 bg-gray-50 flex flex-col overflow-auto">
-              <h1 className="text-lg font-black uppercase tracking-widest text-gray-900 mb-6">Threat Dashboard</h1>
+            <div className={`flex-1 p-8 flex flex-col overflow-auto transition-colors ${
+              isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-gray-900'
+            }`}>
+              <h1 className={`text-lg font-black uppercase tracking-widest mb-6 ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Threat Dashboard</h1>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
                 {/* 1. Active Threat */}
                 <button 
                   onClick={() => setDashboardView('detailed')}
                   className={`border rounded-3xl p-6 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
                     alertsCount > 0 
-                      ? 'bg-red-50/50 border-red-200 shadow-sm hover:shadow-xl hover:border-red-300' 
-                      : 'bg-emerald-50/40 border-emerald-200/80 shadow-[0_8px_30px_rgb(16,185,129,0.06)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] hover:border-emerald-300'
+                      ? (isDarkMode ? 'bg-red-950/20 border-red-900/60 hover:border-red-600' : 'bg-red-50/50 border-red-200 shadow-sm hover:shadow-xl hover:border-red-300') 
+                      : (isDarkMode ? 'bg-emerald-950/20 border-emerald-900/60 hover:border-emerald-600' : 'bg-emerald-50/40 border-emerald-200/80 shadow-[0_8px_30px_rgb(16,185,129,0.06)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] hover:border-emerald-300')
                   }`}
                 >
                   <div 
@@ -2309,33 +2440,53 @@ function AppMain() {
                           <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${alertsCount > 0 ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
                           <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${alertsCount > 0 ? 'bg-red-600' : 'bg-emerald-600'}`}></span>
                         </span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${alertsCount > 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${
+                          isDarkMode 
+                            ? (alertsCount > 0 ? 'text-red-400' : 'text-emerald-400')
+                            : (alertsCount > 0 ? 'text-red-600' : 'text-emerald-700')
+                        }`}>
                           Live Intel
                         </span>
                       </div>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border font-semibold ${
-                        alertsCount > 0 ? 'bg-red-100/70 text-red-700 border-red-200' : 'bg-emerald-100/70 text-emerald-800 border-emerald-200'
+                        alertsCount > 0 
+                          ? (isDarkMode ? 'bg-red-950/80 text-red-300 border-red-800' : 'bg-red-100/70 text-red-700 border-red-200')
+                          : (isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-100/70 text-emerald-800 border-emerald-200')
                       }`}>
                         {alertsCount > 0 ? 'Active Threats' : 'Perimeter Clear'}
                       </span>
                     </div>
 
                     <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
-                      alertsCount > 0 ? 'text-red-950 group-hover:text-red-600' : 'text-emerald-950 group-hover:text-emerald-700'
+                      isDarkMode 
+                        ? (alertsCount > 0 ? 'text-white group-hover:text-red-400' : 'text-white group-hover:text-emerald-400') 
+                        : (alertsCount > 0 ? 'text-red-950 group-hover:text-red-600' : 'text-emerald-950 group-hover:text-emerald-700')
                     }`}>
                       Active Threat
                     </h2>
-                    <p className={`text-[11px] font-medium ${alertsCount > 0 ? 'text-red-600/70' : 'text-emerald-700/70'}`}>
+                    <p className={`text-[11px] font-medium ${
+                      isDarkMode
+                        ? (alertsCount > 0 ? 'text-red-300' : 'text-emerald-300/90')
+                        : (alertsCount > 0 ? 'text-red-600/70' : 'text-emerald-700/70')
+                    }`}>
                       {alertsCount > 0 ? `${alertsCount} critical threats requiring response` : 'No immediate critical threats detected'}
                     </p>
                   </div>
 
                   <div className="flex items-end justify-between mt-4">
                     <div>
-                      <span className={`text-4xl font-black leading-none tracking-tight ${alertsCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      <span className={`text-4xl font-black leading-none tracking-tight ${
+                        isDarkMode
+                          ? (alertsCount > 0 ? 'text-red-400' : 'text-emerald-400')
+                          : (alertsCount > 0 ? 'text-red-600' : 'text-emerald-600')
+                      }`}>
                         {alertsCount}
                       </span>
-                      <span className={`text-xs font-bold ml-2 ${alertsCount > 0 ? 'text-red-400' : 'text-emerald-600/70'}`}>Alerts</span>
+                      <span className={`text-xs font-bold ml-2 ${
+                        isDarkMode 
+                          ? (alertsCount > 0 ? 'text-red-300' : 'text-emerald-300/80')
+                          : (alertsCount > 0 ? 'text-red-400' : 'text-emerald-600/70')
+                      }`}>Alerts</span>
                     </div>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                       alertsCount > 0 
@@ -2351,7 +2502,11 @@ function AppMain() {
                 {/* 2. Organization Risk Index (Replaces Intel Reports) */}
                 <button 
                   onClick={() => { setRiskAssessmentInitialTab('summary'); setRiskAssessmentKey(k => k + 1); setActivePage('risk-assessment'); }}
-                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-amber-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                  className={`border rounded-3xl p-6 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
+                    isDarkMode 
+                      ? 'bg-slate-900 border-slate-800 hover:border-amber-500/50' 
+                      : 'bg-white border-gray-200/90 shadow-sm hover:shadow-xl hover:border-amber-200'
+                  }`}
                 >
                   <div 
                     className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl pointer-events-none transition-all opacity-20"
@@ -2364,7 +2519,7 @@ function AppMain() {
                         <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 truncate" title={currentProfile?.profile?.company_name || 'Enterprise Assessment'}>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 truncate" title={currentProfile?.profile?.company_name || 'Enterprise Assessment'}>
                           {currentProfile?.profile?.company_name || 'Enterprise Profile'}
                         </span>
                       </div>
@@ -2376,7 +2531,9 @@ function AppMain() {
                       </span>
                     </div>
 
-                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-amber-600 transition-colors">
+                    <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
+                      isDarkMode ? 'text-slate-100 group-hover:text-amber-400' : 'text-gray-800 group-hover:text-amber-600'
+                    }`}>
                       Organization Risk Index
                     </h2>
                     <p className="text-[11px] font-medium text-gray-400 truncate">
@@ -2389,7 +2546,7 @@ function AppMain() {
                       {/* Mini circular SVG gauge */}
                       <div className="relative w-11 h-11 flex items-center justify-center">
                         <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
-                          <circle cx="22" cy="22" r="18" fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                          <circle cx="22" cy="22" r="18" fill="none" stroke={isDarkMode ? "#334155" : "#f1f5f9"} strokeWidth="4" />
                           <circle
                             cx="22" cy="22" r="18" fill="none"
                             stroke={riskMeta.stroke} strokeWidth="4"
@@ -2404,7 +2561,7 @@ function AppMain() {
                         </span>
                       </div>
                       <div>
-                        <div className="text-sm font-black text-gray-900 leading-none">
+                        <div className={`text-sm font-black leading-none ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>
                           {calculatedRiskScore}<span className="text-[10px] font-bold text-gray-400">/100</span>
                         </div>
                         <div className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-1">
@@ -2423,7 +2580,11 @@ function AppMain() {
                 {/* 3. Personnel & Crisis Readiness */}
                 <button 
                   onClick={() => setActivePage('employees')}
-                  className="bg-white border border-gray-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+                  className={`border rounded-3xl p-6 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
+                    isDarkMode 
+                      ? 'bg-slate-900 border-slate-800 hover:border-blue-500/50' 
+                      : 'bg-white border-gray-200/90 shadow-sm hover:shadow-xl hover:border-blue-200'
+                  }`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-blue-500/10 transition-all" />
 
@@ -2431,14 +2592,14 @@ function AppMain() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                           Personnel Readiness
                         </span>
                       </div>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
                         personnelExposure.atRiskEmployees > 0
-                          ? 'bg-rose-50 text-rose-600 border-rose-100'
-                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                          ? (isDarkMode ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-600 border-rose-100')
+                          : (isDarkMode ? 'bg-blue-950/80 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100')
                       }`}>
                         {personnelExposure.atRiskEmployees > 0
                           ? `${personnelExposure.atRiskEmployees} Staff in Alert Zone`
@@ -2446,13 +2607,15 @@ function AppMain() {
                       </span>
                     </div>
 
-                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-1 group-hover:text-blue-600 transition-colors">
+                    <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
+                      isDarkMode ? 'text-slate-100 group-hover:text-blue-400' : 'text-gray-800 group-hover:text-blue-600'
+                    }`}>
                       Personnel & Crisis Readiness
                     </h2>
                     <p className="text-[11px] font-medium text-gray-400 truncate">
                       {personnelExposure.atRiskEmployees > 0
                         ? `Emergency alert dispatch advised for ${personnelExposure.atRiskEmployees} personnel`
-                        : `${personnelExposure.totalRegistered > 0 ? `${personnelExposure.totalRegistered} Registered Staff` : `${currentProfile?.locations?.length || 4} Facility Hubs`} · Crisis Dispatch Ready`}
+                        : `${employees.length} Registered Staff · Crisis Dispatch Ready`}
                     </p>
                   </div>
 
@@ -2460,17 +2623,17 @@ function AppMain() {
                     <div>
                       {personnelExposure.atRiskEmployees > 0 ? (
                         <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-black text-rose-600 leading-none">{personnelExposure.atRiskEmployees}</span>
-                          <span className="text-xs font-bold text-gray-400">/ {personnelExposure.totalRegistered} At Risk</span>
+                          <span className={`text-4xl font-black leading-none ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>{personnelExposure.atRiskEmployees}</span>
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>/ {personnelExposure.totalRegistered} At Risk</span>
                         </div>
                       ) : (
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-4xl font-black text-blue-600 leading-none">
+                          <span className={`text-4xl font-black leading-none ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                             {personnelExposure.totalRegistered > 0
                               ? personnelExposure.totalRegistered
                               : (personnelExposure.facilityHeadcount ? personnelExposure.facilityHeadcount.toLocaleString() : '3,000+')}
                           </span>
-                          <span className="text-xs font-bold text-gray-400">Staff Protected</span>
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Staff Protected</span>
                         </div>
                       )}
                     </div>
@@ -2486,7 +2649,11 @@ function AppMain() {
               <div className="flex-1 min-h-[320px]">
                 <DashboardMiniMap
                   articles={articles}
-                  onNavigateToMaps={() => setActivePage('maps')}
+                  isDarkMode={isDarkMode}
+                  onNavigateToMaps={() => {
+                    setMapsTheme(isDarkMode ? 'dark' : 'light');
+                    setActivePage('maps');
+                  }}
                   companyLocations={currentProfile?.locations || []}
                 />
               </div>
@@ -2506,11 +2673,15 @@ function AppMain() {
             )}
           {activePage !== 'dashboard' && (
           <div className="p-4 pb-1 shrink-0">
-            <div className="bg-white border border-gray-100 rounded-3xl p-5 space-y-4 shadow-xl shadow-gray-200/30">
+            <div className={`border rounded-3xl p-5 space-y-4 shadow-xl transition-colors ${
+              isDarkMode 
+                ? 'bg-slate-900 border-slate-800 text-slate-100 shadow-slate-950/50' 
+                : 'bg-white border-gray-100 text-gray-900 shadow-gray-200/30'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="w-1.5 h-6 bg-red-600 rounded-full" />
-                  <h2 className="text-xs font-black text-gray-900 uppercase tracking-widest">Analysis Configuration</h2>
+                  <h2 className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Analysis Configuration</h2>
                   <button
                     onClick={() => setConfigExpanded(!configExpanded)}
                     className="ml-3 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
@@ -2519,13 +2690,13 @@ function AppMain() {
                   </button>
                 </div>
                 <div className="flex gap-4 items-center">
-                  <div className="flex items-center gap-2 bg-gray-50/50 border border-gray-100 rounded-lg p-1 px-2.5">
+                  <div className={`flex items-center gap-2 border rounded-lg p-1 px-2.5 ${isDarkMode ? 'bg-slate-800/60 border-slate-700 text-slate-200' : 'bg-gray-50/50 border-gray-100 text-gray-700'}`}>
                     <span className="text-[9px] font-black uppercase text-gray-400">Interval:</span>
                     <input
                       type="number"
                       value={autoPilotInterval}
                       onChange={e => setAutoPilotInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-8 bg-transparent text-[10px] font-bold text-gray-700 text-center outline-none"
+                      className={`w-8 bg-transparent text-[10px] font-bold text-center outline-none ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
                       min="1"
                     />
                     <span className="text-[9px] font-black uppercase text-gray-400">min</span>
@@ -2651,11 +2822,15 @@ function AppMain() {
           </div>
           )}
 
-          <main className="flex-1 flex overflow-hidden p-6 gap-6 bg-gray-50/50">
+          <main className={`flex-1 flex overflow-hidden p-6 gap-6 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-gray-50/50'}`}>
             {/* SECTOR 1: SOURCES (Authentic vs Other) */}
-            <section className="w-[30%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-lg relative">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
-                <span className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Sources</span>
+            <section className={`w-[30%] flex flex-col overflow-hidden border rounded-2xl shadow-lg relative ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'
+            }`}>
+              <div className={`p-4 border-b flex items-center justify-between shrink-0 ${
+                isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'
+              }`}>
+                <span className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Sources</span>
                 {params.prefSrc?.length > 0 && rawArticles.length > 0 && (() => {
                   // Count unique preferred articles at raw level (not inflated by event grouping)
                   const seen = new Set();
@@ -3019,12 +3194,18 @@ function AppMain() {
 
 
             {/* SECTOR 2: ALERTS & INTEL LEDGER */}
-            <section className="w-[40%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-lg relative">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
-                <span className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Intel Ledger</span>
+            <section className={`w-[40%] flex flex-col overflow-hidden border rounded-2xl shadow-lg relative ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'
+            }`}>
+              <div className={`p-4 border-b flex items-center justify-between shrink-0 ${
+                isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'
+              }`}>
+                <span className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Intel Ledger</span>
               </div>
               {/* Filter tabs */}
-              <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-2 bg-gray-50/60 shrink-0">
+              <div className={`px-4 py-2 border-b flex items-center gap-2 shrink-0 ${
+                isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-gray-50/60 border-gray-100'
+              }`}>
                 {(() => {
                   const validArticles = articles.filter(a => a?.ai?.classification !== 'IRRELEVANT');
                   return [
@@ -3197,10 +3378,16 @@ function AppMain() {
             </section>
 
             {/* SECTOR 3: RECOMMENDED SUGGESTIONS */}
-            <section className="flex-1 flex flex-col overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-lg">
+            <section className={`flex-1 flex flex-col overflow-hidden border rounded-2xl shadow-lg ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'
+            }`}>
               {/* Sticky Header */}
-              <div className="px-5 py-3.5 border-b border-gray-100 bg-white shrink-0 flex items-center justify-between">
-                <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">Recommended Suggestions for Selected Alert</span>
+              <div className={`px-5 py-3.5 border-b shrink-0 flex items-center justify-between ${
+                isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-700'
+              }`}>
+                <span className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
+                  Recommended Suggestions for Selected Alert
+                </span>
                 {activeArticle && (
                   <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider ${activeArticle.ai?.classification === 'ALERT' ? 'bg-red-600 text-white' :
                     activeArticle.ai?.classification === 'INFORMATIVE' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'

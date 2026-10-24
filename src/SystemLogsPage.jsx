@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function SystemLogsPage({ logs = [], onClearLogs }) {
+export default function SystemLogsPage({ logs = [], onClearLogs, isDarkMode = false }) {
   const [filter, setFilter] = useState('ALL');
   const [expandedLogId, setExpandedLogId] = useState(null);
 
@@ -38,6 +38,15 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
   };
 
   const getCardStyle = (type) => {
+    if (isDarkMode) {
+      switch (type) {
+        case 'ANALYSIS': return 'bg-purple-950/30 border-purple-900/50 text-purple-200';
+        case 'AUTH': return 'bg-emerald-950/30 border-emerald-900/50 text-emerald-200';
+        case 'CONFIG': return 'bg-indigo-950/30 border-indigo-900/50 text-indigo-200';
+        case 'ERROR': return 'bg-red-950/40 border-red-900/60 text-red-200';
+        case 'INFO': default: return 'bg-slate-900/80 border-slate-800 text-slate-200';
+      }
+    }
     switch (type) {
       case 'ANALYSIS': return 'bg-purple-50/40 border-purple-100 text-purple-950';
       case 'AUTH': return 'bg-emerald-50/40 border-emerald-100 text-emerald-950';
@@ -48,9 +57,13 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 p-6 space-y-6">
+    <div className={`flex-1 flex flex-col h-full overflow-hidden p-6 space-y-6 transition-colors ${
+      isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       {/* Header */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+      <div className={`rounded-2xl p-6 shadow-sm flex items-center justify-between border transition-colors ${
+        isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
             <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -90,12 +103,16 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm">
+      <div className={`flex items-center justify-between rounded-2xl px-5 py-3 shadow-sm border transition-colors ${
+        isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilter('ALL')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-              filter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              filter === 'ALL' 
+                ? (isDarkMode ? 'bg-red-600 text-white shadow-sm' : 'bg-slate-900 text-white shadow-sm')
+                : (isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')
             }`}
           >
             All Logs ({logs.length})
@@ -103,7 +120,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
           <button
             onClick={() => setFilter('ANALYSIS')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-              filter === 'ANALYSIS' ? 'bg-purple-600 text-white shadow-sm' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+              filter === 'ANALYSIS' ? 'bg-purple-600 text-white shadow-sm' : (isDarkMode ? 'bg-purple-950/40 text-purple-300 hover:bg-purple-900/50' : 'bg-purple-50 text-purple-700 hover:bg-purple-100')
             }`}
           >
             Analysis Runs ({analysisCount})
@@ -111,7 +128,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
           <button
             onClick={() => setFilter('AUTH')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-              filter === 'AUTH' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              filter === 'AUTH' ? 'bg-emerald-600 text-white shadow-sm' : (isDarkMode ? 'bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100')
             }`}
           >
             Auth &amp; Config ({authCount})
@@ -119,7 +136,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
           <button
             onClick={() => setFilter('ERRORS')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-              filter === 'ERRORS' ? 'bg-red-600 text-white shadow-sm' : 'bg-red-50 text-red-600 hover:bg-red-100'
+              filter === 'ERRORS' ? 'bg-red-600 text-white shadow-sm' : (isDarkMode ? 'bg-red-950/40 text-red-400 hover:bg-red-900/50' : 'bg-red-50 text-red-600 hover:bg-red-100')
             }`}
           >
             Errors ({errorCount})
@@ -127,7 +144,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
           <button
             onClick={() => setFilter('INFO')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-              filter === 'INFO' ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+              filter === 'INFO' ? 'bg-blue-600 text-white shadow-sm' : (isDarkMode ? 'bg-blue-950/40 text-blue-300 hover:bg-blue-900/50' : 'bg-blue-50 text-blue-600 hover:bg-blue-100')
             }`}
           >
             Status Info ({infoCount})
@@ -140,7 +157,9 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
       </div>
 
       {/* Logs Feed Container */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-2xl p-5 overflow-y-auto shadow-sm">
+      <div className={`flex-1 rounded-2xl p-5 overflow-y-auto shadow-sm border transition-colors ${
+        isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         {filteredLogs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8">
             <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-3">
@@ -169,7 +188,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                       <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 ${getBadgeStyle(log.type)}`}>
                         {log.type}
                       </span>
-                      <h4 className="text-[11px] font-black uppercase tracking-wide text-slate-900">
+                      <h4 className={`text-[11px] font-black uppercase tracking-wide ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {log.title || log.type}
                       </h4>
                     </div>
@@ -188,7 +207,11 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                       {hasDetails && (
                         <button
                           onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                          className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-black text-slate-700 hover:text-purple-600 hover:border-purple-200 uppercase transition-all shadow-sm"
+                          className={`px-2.5 py-1 border rounded-lg text-[9px] font-black uppercase transition-all shadow-sm ${
+                            isDarkMode 
+                              ? 'bg-slate-800 border-slate-700 text-slate-200 hover:text-purple-400 hover:border-purple-500' 
+                              : 'bg-white border-slate-200 text-slate-700 hover:text-purple-600 hover:border-purple-200'
+                          }`}
                         >
                           {isExpanded ? 'Hide Query Parameters' : 'View Query Audit'}
                         </button>
@@ -196,15 +219,23 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                     </div>
                   </div>
 
-                  <p className="text-[11px] font-medium leading-relaxed break-words font-mono text-slate-700 pl-1">
+                  <p className={`text-[11px] font-medium leading-relaxed break-words font-mono pl-1 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
                     {log.message}
                   </p>
 
                   {/* Rendered Audit Details Card */}
                   {hasDetails && isExpanded && (
-                    <div className="mt-3 p-4 bg-white rounded-xl border border-purple-100 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">
+                    <div className={`mt-3 p-4 rounded-xl border shadow-sm space-y-3 ${
+                      isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-purple-100'
+                    }`}>
+                      <div className={`flex items-center justify-between border-b pb-2 ${
+                        isDarkMode ? 'border-slate-800' : 'border-slate-100'
+                      }`}>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${
+                          isDarkMode ? 'text-purple-400' : 'text-purple-700'
+                        }`}>
                           Captured Query Parameters &amp; Results
                         </span>
                         {log.details.provider && (
@@ -215,7 +246,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[10px]">
-                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <div className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Target Hazards</span>
                           <div className="flex flex-wrap gap-1">
                             {log.details.hazards?.length > 0
@@ -224,7 +255,7 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                           </div>
                         </div>
 
-                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <div className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Concepts</span>
                           <div className="flex flex-wrap gap-1">
                             {log.details.concepts?.length > 0
@@ -233,16 +264,16 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
                           </div>
                         </div>
 
-                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <div className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Location Scope</span>
-                          <p className="font-bold text-slate-800 text-[9px] truncate">
+                          <p className={`font-bold text-[9px] truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             {log.details.country} {log.details.state !== 'All Regions' ? `> ${log.details.state}` : ''}
                           </p>
                         </div>
 
-                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <div className={`p-2.5 rounded-lg border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Time &amp; Radius</span>
-                          <p className="font-bold text-slate-800 text-[9px]">
+                          <p className={`font-bold text-[9px] ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             {log.details.duration} | Radius: {log.details.radius}
                           </p>
                         </div>
@@ -250,8 +281,10 @@ export default function SystemLogsPage({ logs = [], onClearLogs }) {
 
                       {/* Result metrics if available */}
                       {log.details.totalAnalyzed !== undefined && (
-                        <div className="flex items-center gap-3 pt-1 border-t border-slate-100 text-[9px] font-black">
-                          <span className="text-slate-500 uppercase tracking-wider">Classification Output:</span>
+                        <div className={`flex items-center gap-3 pt-1 border-t text-[9px] font-black ${
+                          isDarkMode ? 'border-slate-800' : 'border-slate-100'
+                        }`}>
+                          <span className="text-slate-400 uppercase tracking-wider">Classification Output:</span>
                           <span className="bg-red-600 text-white px-2 py-0.5 rounded shadow-sm">{log.details.alertsCount} ALERTS</span>
                           <span className="bg-blue-600 text-white px-2 py-0.5 rounded shadow-sm">{log.details.infoCount} INFORMATIVE</span>
                           <span className="bg-slate-400 text-white px-2 py-0.5 rounded shadow-sm">{log.details.irrelevantCount} IRRELEVANT</span>

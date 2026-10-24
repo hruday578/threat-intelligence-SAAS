@@ -7,7 +7,7 @@ const EMPTY_FORM = {
   personalEmail: '', phone: '', country: '', state: '',
 };
 
-export default function EmployeesPage({ employees = [], setEmployees }) {
+export default function EmployeesPage({ employees = [], setEmployees, isDarkMode = false }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [editIdx, setEditIdx] = useState(null);
@@ -63,7 +63,7 @@ export default function EmployeesPage({ employees = [], setEmployees }) {
   const countryName = (code) => COUNTRIES.find(c => c.code === code)?.name || code;
 
   return (
-    <div className="emp-page">
+    <div className={`emp-page ${isDarkMode ? 'emp-dark' : ''}`}>
       {/* Header */}
       <div className="emp-topbar">
         <div className="emp-topbar-left">

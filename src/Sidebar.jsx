@@ -57,10 +57,11 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, errorCount = 0 }) {
+export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, errorCount = 0, isDarkMode = false }) {
+  const logoSrc = isDarkMode ? "/monochrome_logo.png" : "/alertem-logo.png";
   return (
     <aside
-      className="sidebar-root"
+      className={`sidebar-root ${isDarkMode ? 'sidebar-dark' : 'sidebar-light'}`}
       style={{
         width: collapsed ? 68 : 220,
         minWidth: collapsed ? 68 : 220,
@@ -72,11 +73,11 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, e
         <div className="sidebar-logo-area">
           {collapsed ? (
             <div className="sidebar-logo-icon">
-              <img src="/alertem-logo.png" alt="ThreatLazer" className="sidebar-logo-img-small" />
+              <img src={logoSrc} alt="ThreatLazer" className="sidebar-logo-img-small" />
             </div>
           ) : (
             <div className="sidebar-logo-full">
-              <img src="/alertem-logo.png" alt="ThreatLazer.AI" className="sidebar-logo-img-full" />
+              <img src={logoSrc} alt="ThreatLazer.AI" className="sidebar-logo-img-full" />
             </div>
           )}
         </div>

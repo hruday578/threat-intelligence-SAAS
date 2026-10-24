@@ -800,7 +800,7 @@ function RiskScoreRing({ score }) {
 }
 
 //  Main Component 
-export default function RiskAssessmentPage({ articles = [], initialTab = 'profile', provider = 'groq-120b', aiKey = '' }) {
+export default function RiskAssessmentPage({ articles = [], initialTab = 'profile', provider = 'groq-120b', aiKey = '', isDarkMode = false }) {
   const [step, setStep] = useState(initialTab);
   const [profile, setProfile] = useState({ ...EMPTY_PROFILE });
   const [locations, setLocations] = useState([]);
@@ -957,7 +957,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
   const currentStepIdx = STEPS.findIndex(s => s.id === step);
 
   return (
-    <div className="ra-page">
+    <div className={`ra-page ${isDarkMode ? 'ra-dark' : ''}`}>
       {/*  Header  */}
       <div className="ra-header">
         <div className="ra-header-left">

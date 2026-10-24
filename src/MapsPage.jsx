@@ -533,10 +533,9 @@ const TILE_THEMES = {
     attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
   },
   light: {
-    // Esri World Light Gray Canvas (base) + English Reference (labels) — clean, professional, 100% English names
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    labelsUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+    // Esri World Street Map — classic standard street map styling (clean roads, cities, blue oceans, green parks) with 100% English labels
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -622,7 +621,8 @@ export default function MapsPage({
   autoPilotInterval = 5,
   targetZone = '',
   radius = 0,
-  companyLocations = []
+  companyLocations = [],
+  initialMapStyle = 'light'
 }) {
   const [markers, setMarkers] = useState([]);
   const [employeeMarkers, setEmployeeMarkers] = useState([]);
@@ -643,7 +643,13 @@ export default function MapsPage({
   const [activeTab, setActiveTab] = useState('threats'); // 'threats' | 'employees' | 'index' | 'settings'
   const [showChoropleth, setShowChoropleth] = useState(false);
   const [countryFilter, setCountryFilter] = useState(null); // null = show all
-  const [mapStyle, setMapStyle] = useState('dark'); // 'dark' | 'light' | 'satellite' | 'terrain'
+  const [mapStyle, setMapStyle] = useState(initialMapStyle); // 'dark' | 'light' | 'satellite' | 'terrain'
+
+  useEffect(() => {
+    if (initialMapStyle) {
+      setMapStyle(initialMapStyle);
+    }
+  }, [initialMapStyle]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAlerts, setShowAlerts] = useState(true);
   const [showReports, setShowReports] = useState(true);
