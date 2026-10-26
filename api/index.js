@@ -81,15 +81,18 @@ app.post('/api/broadcast', async (req, res) => {
       </table>`;
   }
 
-  function objectiveHtml(num, label, priority, steps, solidBg, accentColor, bgColor, borderColor) {
+  function objectiveHtml(label, steps, icon) {
+    const solidBg = '#4b5563';
+    const bgColor = '#f1f5f9';
+    const accentColor = '#4b5563';
+    const borderColor = '#e2e8f0';
     return `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid ${borderColor};">
         <tr><td bgcolor="${solidBg}" style="background-color:${solidBg};background:${solidBg};padding:14px 18px;">
-          <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.7);line-height:1;margin-bottom:4px;">Objective ${num}</div>
-          <div style="font-size:13px;font-weight:900;color:#ffffff;text-transform:uppercase;letter-spacing:0.03em;">${label}</div>
-        </td></tr>
-        <tr><td bgcolor="${bgColor}" style="background-color:${bgColor};padding:8px 16px;border-top:1px solid ${borderColor};">
-          <div style="font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:${accentColor};">Priority: ${priority}</div>
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="vertical-align:middle;padding-right:8px;">${icon}</td>
+            <td style="vertical-align:middle;font-size:13px;font-weight:900;color:#ffffff;text-transform:uppercase;letter-spacing:0.03em;">${label}</td>
+          </tr></table>
         </td></tr>
         ${steps.map((step, idx) => `
         <tr><td bgcolor="#ffffff" style="background:#ffffff;padding:11px 16px;border-top:1px solid ${borderColor};">
@@ -124,23 +127,8 @@ app.post('/api/broadcast', async (req, res) => {
   const mitigationHtml = stepsHtml(mitigationSteps, '#dc2626', '#fef2f2', '#fecaca', '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>', 'Mitigation Strategy');
   const citizenHtml    = stepsHtml(citizenSteps,    '#0f172a', '#f1f5f9', '#e2e8f0', '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>', 'Civilian Action Protocol');
 
-  const reasoningHtml = rawReasoning && !['unknown','n/a','none'].includes(rawReasoning.toLowerCase().trim()) ? `
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:1px solid #fde68a;">
-        <tr><td style="background:#d97706;padding:0 0 0 4px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="background:#fffbeb;padding:11px 16px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>&nbsp;&nbsp;AI Intelligence Assessment
-            </td></tr>
-            <tr><td style="background:#ffffff;padding:14px 18px;border-top:1px solid #fde68a;font-size:12.5px;line-height:1.65;color:#44403c;font-style:italic;">
-              &ldquo;${rawReasoning}&rdquo;
-            </td></tr>
-          </table>
-        </td></tr>
-      </table>` : '';
-
   const obj1Html = objectiveHtml(
-    '01', 'Pre-Event Asset Hardening &amp; Life Safety Precautions',
-    'Pre-Disaster Risk Reduction &amp; Life Safety Preparedness',
+    'Life and Asset Safety Measures',
     [
       'Pre-activate Incident Management Team (IMT) and verify pre-assigned roles for Floor Wardens and Safety Officers.',
       'Conduct pre-event facility inspections — check emergency exits, fire suppression systems, and backup generators.',
@@ -150,12 +138,11 @@ app.post('/api/broadcast', async (req, res) => {
       'Establish real-time monitoring of official early warning systems (NWS, Met Dept, Emergency Services).',
       'Pre-position protective equipment (flood barriers, sandbags, window shutters, surge protectors) ahead of impact.',
     ],
-    '#991b1b', '#dc2626', '#fef2f2', '#fecaca'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>'
   );
 
   const obj2Html = objectiveHtml(
-    '02', 'Precautionary Business Continuity Staging &amp; Risk Mitigation',
-    'Proactive System Staging &amp; Downtime Prevention',
+    'Business Continuity and Recovery Measures',
     [
       'Pre-emptively stage Business Continuity Plans (BCP) for critical business units (IT, Security, Finance, Ops).',
       'Pre-authorize remote work protocols and verify VPN / cloud access for all essential staff prior to hazard landfall.',
@@ -165,12 +152,11 @@ app.post('/api/broadcast', async (req, res) => {
       'Test backup power systems (UPS, fuel for generators) and verify fuel reserves for emergency vehicles.',
       'Establish high-frequency check-in schedules for IT infrastructure and critical operations teams.',
     ],
-    '#1e40af', '#1d4ed8', '#eff6ff', '#bfdbfe'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>'
   );
 
   const obj3Html = objectiveHtml(
-    '03', 'Pre-Incident Travel Advisories &amp; Mobility Restrictions',
-    'Preventive Mobility Management &amp; Travel Risk Reduction',
+    '✈ Travel and Mobility Measures',
     [
       'Immediately restrict or halt non-essential travel into the target alert zone prior to hazard escalation.',
       'Audit itinerary logs for all active business travelers currently in or bound for the high-risk region.',
@@ -180,7 +166,7 @@ app.post('/api/broadcast', async (req, res) => {
       'Monitor airport closures, transit suspensions, and highway advisories continuously to reroute staff proactively.',
       'Establish clear pre-incident check-in protocols for field employees before communications networks become overloaded.',
     ],
-    '#0f172a', '#0f3460', '#f8fafc', '#cbd5e1'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>'
   );
 
   const reportedDate = new Date(threat.date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -188,7 +174,7 @@ app.post('/api/broadcast', async (req, res) => {
   // ── HTML Email ────────────────────────────────────────────────────────────
   const htmlContent = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>AlertEm Threat Brief</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>threatlazer.ai Threat Brief</title></head>
 <body style="margin:0;padding:0;background:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
 
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#e5e7eb;padding:28px 0;">
@@ -199,7 +185,7 @@ app.post('/api/broadcast', async (req, res) => {
       <tr><td style="background:#09090b;padding:14px 24px;border-radius:14px 14px 0 0;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="color:#ffffff;font-size:16px;font-weight:900;letter-spacing:0.04em;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Alert<span style="color:#ef4444;">Em</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>threatlazer<span style="color:#ef4444;">.ai</span>
           </td>
           <td align="right" style="color:#71717a;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">
             Threat Intelligence Platform
@@ -304,23 +290,18 @@ app.post('/api/broadcast', async (req, res) => {
         ${obj3Html}
         ` : ''}
 
-        <!-- AI Reasoning -->
-        ${reasoningHtml}
-
-
-
       </td></tr>
 
       <!-- Footer -->
       <tr><td style="background:#09090b;padding:20px 24px;border-radius:0 0 14px 14px;text-align:center;">
         <p style="margin:0 0 6px;font-size:10px;color:#52525b;">
-          This is an automated safety broadcast from the <strong style="color:#a1a1aa;">AlertEm Threat Intelligence Platform</strong>.
+          This is an automated safety broadcast from the <strong style="color:#a1a1aa;">threatlazer.ai Threat Intelligence Platform</strong>.
         </p>
         <p style="margin:0;font-size:10px;color:#3f3f46;">
           Always follow official local emergency management directives. Do not reply to this message.
         </p>
         <p style="margin:10px 0 0;font-size:9px;color:#27272a;letter-spacing:0.06em;text-transform:uppercase;">
-          © ${new Date().getFullYear()} AlertEm · Confidential Broadcast
+          © ${new Date().getFullYear()} threatlazer.ai · Confidential Broadcast
         </p>
       </td></tr>
 

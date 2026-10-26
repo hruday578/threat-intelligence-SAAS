@@ -923,7 +923,7 @@ function DashboardMiniMap({ articles = [], onNavigateToMaps, companyLocations = 
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
             <h2 className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Global Threat & Facility Map
+              Global Threat Map
             </h2>
           </div>
           <div className="flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1258,7 +1258,7 @@ function AppMain() {
     const logEntry = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString(),
-      date: new Date().toLocaleDateString(),
+      date: new Date().toLocaleDateString('en-GB'),
       type, // 'AUTH', 'ANALYSIS', 'CONFIG', 'ERROR', 'INFO'
       title: title || type,
       message,
@@ -2298,7 +2298,7 @@ function AppMain() {
             <span className={`px-2 py-0.5 rounded text-[7px] font-black uppercase ${art.ai.classification === 'ALERT' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{art.ai.classification}</span>
             {pushedAlerts.has(art.id) && <span className="px-2 py-0.5 rounded text-[7px] font-black uppercase bg-green-500 text-white">PUSHED</span>}
           </div>
-          <span className="text-[8px] font-bold text-gray-300">{new Date(art.date).toLocaleDateString()}</span>
+          <span className="text-[8px] font-bold text-gray-300">{new Date(art.date).toLocaleDateString('en-GB')}</span>
         </div>
         <h3 className={`text-[11px] font-black leading-tight mb-2 ${art.ai.classification === 'ALERT' ? 'text-red-600' : 'text-gray-900'}`}>{art.title}</h3>
         <div className="flex items-center justify-between">
@@ -2387,12 +2387,7 @@ function AppMain() {
               )}
             </div>
             <div className="flex items-center gap-4">
-              {error && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 rounded-lg max-w-[250px] shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shrink-0" />
-                  <span className="text-[8px] font-black text-red-600 uppercase tracking-widest truncate" title={error}>{error}</span>
-                </div>
-              )}
+
               {/* Light / Dark Mode Toggle */}
               <button
                 onClick={() => {
@@ -2540,7 +2535,8 @@ function AppMain() {
                   </div>
                 </button>
 
-                {/* 2. Organization Risk Index (Replaces Intel Reports) */}
+                {/* 2. Organization Risk Index — commented out for future use */}
+                {false && (
                 <button 
                   onClick={() => { setRiskAssessmentInitialTab('summary'); setRiskAssessmentKey(k => k + 1); setActivePage('risk-assessment'); }}
                   className={`border rounded-3xl p-6 transition-all text-left group flex flex-col justify-between min-h-[160px] relative overflow-hidden ${
@@ -2553,7 +2549,6 @@ function AppMain() {
                     className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl pointer-events-none transition-all opacity-20"
                     style={{ background: riskMeta.stroke }}
                   />
-
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5 max-w-[65%]">
@@ -2571,7 +2566,6 @@ function AppMain() {
                         {riskMeta.label}
                       </span>
                     </div>
-
                     <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
                       isDarkMode ? 'text-slate-100 group-hover:text-amber-400' : 'text-gray-800 group-hover:text-amber-600'
                     }`}>
@@ -2581,10 +2575,8 @@ function AppMain() {
                       {currentProfile?.locations?.length || 0} Facilities · {currentProfile?.vendors?.length || 0} Vendors · {currentProfile?.profile?.mfa_implemented ? 'MFA Guarded' : 'MFA Inactive'}
                     </p>
                   </div>
-
                   <div className="flex items-end justify-between mt-3">
                     <div className="flex items-center gap-3">
-                      {/* Mini circular SVG gauge */}
                       <div className="relative w-11 h-11 flex items-center justify-center">
                         <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
                           <circle cx="22" cy="22" r="18" fill="none" stroke={isDarkMode ? "#334155" : "#f1f5f9"} strokeWidth="4" />
@@ -2610,13 +2602,13 @@ function AppMain() {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white group-hover:bg-amber-600 transition-all shadow-sm shadow-amber-200">
                       <span>Assess</span>
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </div>
                   </div>
                 </button>
+                )}
 
                 {/* 3. Personnel & Crisis Readiness */}
                 <button 
@@ -2634,30 +2626,28 @@ function AppMain() {
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                          Personnel Readiness
+                           Personal Safety
                         </span>
                       </div>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                        personnelExposure.atRiskEmployees > 0
-                          ? (isDarkMode ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-600 border-rose-100')
-                          : (isDarkMode ? 'bg-blue-950/80 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100')
-                      }`}>
-                        {personnelExposure.atRiskEmployees > 0
-                          ? `${personnelExposure.atRiskEmployees} Staff in Alert Zone`
-                          : 'Workforce Protected'}
-                      </span>
+                        {personnelExposure.atRiskEmployees > 0 && (
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                            isDarkMode ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-600 border-rose-100'
+                          }`}>
+                            {personnelExposure.atRiskEmployees} Staff in Alert Zone
+                          </span>
+                        )}
                     </div>
 
                     <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
                       isDarkMode ? 'text-slate-100 group-hover:text-blue-400' : 'text-gray-800 group-hover:text-blue-600'
                     }`}>
-                      Personnel & Crisis Readiness
+                      Threat to Personal
                     </h2>
-                    <p className="text-[11px] font-medium text-gray-400 truncate">
-                      {personnelExposure.atRiskEmployees > 0
-                        ? `Emergency alert dispatch advised for ${personnelExposure.atRiskEmployees} personnel`
-                        : `${employees.length} Registered Staff · Crisis Dispatch Ready`}
-                    </p>
+                      {personnelExposure.atRiskEmployees > 0 && (
+                        <p className="text-[11px] font-medium text-gray-400 truncate">
+                          {`Emergency alert dispatch advised for ${personnelExposure.atRiskEmployees} personnel`}
+                        </p>
+                      )}
                   </div>
 
                   <div className="flex items-end justify-between mt-4">
@@ -2674,12 +2664,12 @@ function AppMain() {
                               ? personnelExposure.totalRegistered
                               : (personnelExposure.facilityHeadcount ? personnelExposure.facilityHeadcount.toLocaleString() : '3,000+')}
                           </span>
-                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Staff Protected</span>
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Personal Protected</span>
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white group-hover:bg-blue-700 transition-all shadow-sm shadow-blue-200">
-                      <span>Manage Staff</span>
+                      <span>Manage Personal</span>
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </div>
                   </div>
@@ -3414,7 +3404,7 @@ function AppMain() {
                           <span>{art.ai?.exact_location || art.ai?.region || 'Global'}</span>
                         </p>
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString()}</span>
+                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString('en-GB')}</span>
                           <div className="flex items-center gap-2">
                             {art.ai?.urgency === 'HIGH' && isAlert && <span className="text-[11px] font-semibold text-red-600 animate-pulse">URGENT</span>}
                             {/* Send via Email — broadcasts to employees in same country */}
@@ -3485,8 +3475,8 @@ function AppMain() {
               isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'
             }`}>
               {/* Sticky Header */}
-              <div className={`px-5 py-3.5 border-b shrink-0 flex items-center justify-between ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-700'
+              <div className={`px-5 py-3.5 shrink-0 flex items-center justify-between ${
+                isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-700'
               }`}>
                 <span className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
                   Recommended Suggestions for Selected Alert
@@ -3500,12 +3490,7 @@ function AppMain() {
 
               {activeArticle ? (
                 <div className="flex-1 overflow-y-auto">
-                  {/* Context sub-header */}
-                  <div className={`px-5 py-2.5 border-b flex items-center gap-2 ${activeArticle.ai?.classification === 'ALERT' ? 'bg-red-50 border-red-100' :
-                    activeArticle.ai?.classification === 'INFORMATIVE' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'
-                    }`}>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest truncate">{activeArticle.ai?.hazard} — {activeArticle.ai?.region}</span>
-                  </div>
+
 
                   <div className="p-4 space-y-4">
                     {activeArticle.ai?.classification === 'IRRELEVANT' ? (
@@ -3534,35 +3519,34 @@ function AppMain() {
                       <>
                         {/* ── AI Threat-Specific Precautionary & Preparedness Protocols ── */}
                         {(activeArticle.ai.mitigation || activeArticle.ai.citizen_action) && (
-                          <div className="rounded-2xl overflow-hidden shadow-md border border-emerald-200">
-                            <div style={{ background: 'linear-gradient(135deg, #065f46 0%, #059669 60%, #10b981 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
+                          <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+                            <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.15)' }}>
                                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6-4a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="text-[8px] font-black text-emerald-200 uppercase tracking-widest block leading-none mb-0.5">AI Threat Intelligence Brief</span>
-                                <span className="text-[11px] font-black text-white uppercase tracking-wider">Precautionary &amp; Preventative Measures (Before Impact)</span>
+                                <span className="text-[11px] font-black text-white uppercase tracking-wider">Precautionary &amp; Preventative Measures</span>
                               </div>
                             </div>
 
-                            <div className="p-4 bg-emerald-50/50 space-y-3">
+                            <div className="p-4 bg-gray-50/50 space-y-3">
                               {activeArticle.ai.mitigation && (
-                                <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-sm">
+                                <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
                                   <div className="flex items-center gap-1.5 mb-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                                    <span className="text-[9px] font-black text-emerald-800 uppercase tracking-widest">Operational Precaution &amp; Mitigation Protocol</span>
+                                    <span className="w-2 h-2 rounded-full bg-gray-500 shrink-0" />
+                                    <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Operational Precaution &amp; Mitigation Protocol</span>
                                   </div>
                                   <p className="text-[11px] font-semibold text-gray-800 leading-relaxed">{activeArticle.ai.mitigation}</p>
                                 </div>
                               )}
 
                               {activeArticle.ai.citizen_action && (
-                                <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-sm">
+                                <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm">
                                   <div className="flex items-center gap-1.5 mb-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
-                                    <span className="text-[9px] font-black text-teal-800 uppercase tracking-widest">Staff &amp; Public Safety Readiness Precautions</span>
+                                    <span className="w-2 h-2 rounded-full bg-gray-400 shrink-0" />
+                                    <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Staff &amp; Public Safety Readiness Precautions</span>
                                   </div>
                                   <p className="text-[11px] font-semibold text-gray-800 leading-relaxed">{activeArticle.ai.citizen_action}</p>
                                 </div>
@@ -3571,24 +3555,19 @@ function AppMain() {
                           </div>
                         )}
 
-                        {/* ── Objective 1: Pre-Event Asset Hardening & Life Safety Precautions ── */}
-                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #fecaca' }}>
-                          <div style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 60%, #ef4444 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
+                        {/* ── Life and Asset Safety Measures ── */}
+                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.12)' }}>
                               <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                               </svg>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-[8px] font-black text-red-200 uppercase tracking-widest block leading-none mb-0.5">Objective 01</span>
-                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Pre-Event Asset Hardening &amp; Life Safety Precautions</span>
+                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Life and Asset Safety Measures</span>
                             </div>
                           </div>
-                          <div className="px-4 py-1.5 flex items-center gap-2" style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca' }}>
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#ef4444', animation: 'eq-blink 1.2s ease-in-out infinite' }} />
-                            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: '#dc2626' }}>Priority: Pre-Disaster Risk Reduction &amp; Life Safety Preparedness</span>
-                          </div>
-                          <ul className="bg-white divide-y" style={{ borderColor: '#fef2f2' }}>
+                          <ul className="bg-white divide-y divide-gray-50">
                             {[
                               'Pre-activate Incident Management Team (IMT) and verify pre-assigned roles for Floor Wardens and Safety Officers.',
                               'Conduct pre-event facility inspections — check emergency exits, fire suppression systems, and backup generators.',
@@ -3600,34 +3579,29 @@ function AppMain() {
                             ].map((step, idx) => (
                               <li key={idx} className="flex items-start gap-3 px-4 py-3"
                                 style={{ transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#fff5f5'}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                                 onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
                                 <span className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black mt-0.5"
-                                  style={{ background: '#fee2e2', color: '#dc2626' }}>{idx + 1}</span>
+                                  style={{ background: '#f1f5f9', color: '#4b5563' }}>{idx + 1}</span>
                                 <span className="flex-1 text-[11px] font-semibold text-gray-800 leading-relaxed">{step}</span>
                               </li>
                             ))}
                           </ul>
                         </div>
 
-                        {/* ── Objective 2: Precautionary Business Continuity Staging & Risk Mitigation ── */}
-                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #bfdbfe' }}>
-                          <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 60%, #3b82f6 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
+                        {/* ── Business Continuity and Recovery Measures ── */}
+                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.12)' }}>
                               <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                               </svg>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-[8px] font-black text-blue-200 uppercase tracking-widest block leading-none mb-0.5">Objective 02</span>
-                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Precautionary Business Continuity Staging &amp; Risk Mitigation</span>
+                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Business Continuity and Recovery Measures</span>
                             </div>
                           </div>
-                          <div className="px-4 py-1.5 flex items-center gap-2" style={{ background: '#eff6ff', borderBottom: '1px solid #bfdbfe' }}>
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#3b82f6' }} />
-                            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: '#1d4ed8' }}>Priority: Proactive System Staging &amp; Downtime Prevention</span>
-                          </div>
-                          <ul className="bg-white divide-y divide-blue-50">
+                          <ul className="bg-white divide-y divide-gray-50">
                             {[
                               'Pre-emptively stage Business Continuity Plans (BCP) for critical business units (IT, Security, Finance, Ops).',
                               'Pre-authorize remote work protocols and verify VPN / cloud access for all essential staff prior to hazard landfall.',
@@ -3639,32 +3613,27 @@ function AppMain() {
                             ].map((step, idx) => (
                               <li key={idx} className="flex items-start gap-3 px-4 py-3"
                                 style={{ transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                                 onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
                                 <span className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black mt-0.5"
-                                  style={{ background: '#dbeafe', color: '#1d4ed8' }}>{idx + 1}</span>
+                                  style={{ background: '#f1f5f9', color: '#4b5563' }}>{idx + 1}</span>
                                 <span className="flex-1 text-[11px] font-semibold text-gray-800 leading-relaxed">{step}</span>
                               </li>
                             ))}
                           </ul>
                         </div>
 
-                        {/* ── Objective 3: Pre-Incident Travel Advisories & Mobility Restrictions ── */}
-                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #cbd5e1' }}>
-                          <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
+                        {/* ── Travel and Mobility Measures ── */}
+                        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.10)' }}>
-                              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21l16.5-9L3.75 3v6.375L13.5 12l-9.75 2.625V21z" />
                               </svg>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-[8px] font-black uppercase tracking-widest block leading-none mb-0.5" style={{ color: '#94a3b8' }}>Objective 03</span>
-                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Pre-Incident Travel Advisories &amp; Mobility Restrictions</span>
+                              <span className="text-[11px] font-black text-white uppercase tracking-wider">Travel and Mobility Measures</span>
                             </div>
-                          </div>
-                          <div className="px-4 py-1.5 flex items-center gap-2" style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Priority: Preventive Mobility Management &amp; Travel Risk Reduction</span>
                           </div>
                           <ul className="bg-white divide-y divide-gray-50">
                             {[
@@ -3678,10 +3647,10 @@ function AppMain() {
                             ].map((step, idx) => (
                               <li key={idx} className="flex items-start gap-3 px-4 py-3"
                                 style={{ transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                                 onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
                                 <span className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black mt-0.5"
-                                  style={{ background: '#f1f5f9', color: '#0f3460' }}>{idx + 1}</span>
+                                  style={{ background: '#f1f5f9', color: '#4b5563' }}>{idx + 1}</span>
                                 <span className="flex-1 text-[11px] font-semibold text-gray-700 leading-relaxed">{step}</span>
                               </li>
                             ))}
@@ -3690,46 +3659,7 @@ function AppMain() {
                       </>
                     )}
 
-                    {/* ── AI Reasoning ── */}
-                    {activeArticle.ai.reasoning && (
-                      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #fde68a' }}>
-                        <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
-                          <svg className="w-3.5 h-3.5 shrink-0" style={{ color: '#f59e0b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#92400e' }}>AI Intelligence Reasoning</span>
-                        </div>
-                        <div className="px-4 py-3.5 bg-white">
-                          <p className="text-[11px] font-semibold text-gray-600 leading-relaxed italic">"{activeArticle.ai.reasoning}"</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ── Read Source Article CTA ── */}
-                    {(activeArticle.sources?.find(s => s?.url)?.url || activeArticle.url) && (
-                      <a
-                        href={activeArticle.sources?.find(s => s?.url)?.url || activeArticle.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-between px-4 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 group"
-                        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#fff', textDecoration: 'none' }}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="text-[8px] font-black uppercase tracking-widest opacity-60 leading-none mb-0.5">Source Intelligence</div>
-                            <div>Read Full Article</div>
-                          </div>
-                        </div>
-                        <svg className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </a>
-                    )}
+                    {/* Read Source Article CTA — removed */}
 
                     {/* ── View Full EQ Response Plan link (earthquake ALERTs only) ── */}
                     {activeArticle.ai.classification === 'ALERT' &&
@@ -3778,7 +3708,7 @@ function AppMain() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-black text-gray-800 uppercase tracking-widest leading-none">Push Alert to Employees</h2>
+                  <h2 className="text-[14px] font-black text-gray-800 uppercase tracking-widest leading-none">Push Alert to Recipients</h2>
                   <p className="text-[11px] font-semibold text-gray-400 mt-1">{emailDraft.article.ai.hazard} in {emailDraft.article.ai.region}</p>
                 </div>
               </div>

@@ -68,7 +68,7 @@ export default function EmployeesPage({ employees = [], setEmployees, isDarkMode
       <div className="emp-topbar">
         <div className="emp-topbar-left">
           <span className="emp-topbar-accent" />
-          <h1 className="emp-topbar-title">Employees</h1>
+          <h1 className="emp-topbar-title">Recipients Details</h1>
           <span className="emp-topbar-count">{employees.length}</span>
         </div>
         <div className="emp-topbar-right">
@@ -80,7 +80,7 @@ export default function EmployeesPage({ employees = [], setEmployees, isDarkMode
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search employees..."
+              placeholder="Search recipients..."
               className="emp-search-input"
             />
           </div>
@@ -88,7 +88,7 @@ export default function EmployeesPage({ employees = [], setEmployees, isDarkMode
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Add Employee
+            Add Recipient
           </button>
         </div>
       </div>
@@ -102,8 +102,8 @@ export default function EmployeesPage({ employees = [], setEmployees, isDarkMode
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
-            <h2 className="emp-empty-title">No Employees Added</h2>
-            <p className="emp-empty-desc">Click "Add Employee" to start building your team directory.</p>
+            <h2 className="emp-empty-title">No Recipients Added</h2>
+            <p className="emp-empty-desc">Click "Add Recipient" to start building your alert recipients directory.</p>
             <button onClick={openAdd} className="emp-empty-btn">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

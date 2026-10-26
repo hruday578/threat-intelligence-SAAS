@@ -442,7 +442,7 @@ const STEPS = [
   { id: 'locations',  label: 'Locations',              icon: '' },
   { id: 'vendors',    label: 'Vendors & Suppliers',    icon: '' },
   { id: 'it',         label: 'IT Dependencies',        icon: '' },
-  { id: 'summary',    label: 'Risk Summary',           icon: '' },
+  // { id: 'summary',    label: 'Risk Summary',           icon: '' },
 ];
 
 const EMPTY_PROFILE = {
@@ -801,7 +801,7 @@ function RiskScoreRing({ score }) {
 
 //  Main Component 
 export default function RiskAssessmentPage({ articles = [], initialTab = 'profile', provider = 'groq-120b', aiKey = '', isDarkMode = false }) {
-  const [step, setStep] = useState(initialTab);
+  const [step, setStep] = useState(initialTab === 'summary' ? 'profile' : initialTab);
   const [profile, setProfile] = useState({ ...EMPTY_PROFILE });
   const [locations, setLocations] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -962,7 +962,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
       <div className="ra-header">
         <div className="ra-header-left">
           <div>
-            <h1 className="ra-header-title">Risk Assessment</h1>
+            <h1 className="ra-header-title">Organizational Details</h1>
             <p className="ra-header-sub">
               {profile.company_name ? profile.company_name : 'New Company Profile'}
               {activeProfileId && <span className="ra-saved-badge"> Saved</span>}
@@ -1381,7 +1381,37 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
         {/* Location form drawer */}
         {editLocIdx !== null && (
           <div className="ra-drawer">
-            <div className="ra-drawer-title">{editLocIdx === -1 ? 'Add Location' : 'Edit Location'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div className="ra-drawer-title" style={{ margin: 0 }}>
+                {editLocIdx === -1 ? 'Add Location' : 'Edit Location'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditLocIdx(null)}
+                title="Close / Cancel"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  fontWeight: 700
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span>Close</span>
+              </button>
+            </div>
             <div className="ra-fields-grid">
               <div className="ra-field">
                 <label className="ra-label">Country *</label>
@@ -1494,8 +1524,15 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                 />
               </div>
               <div className="ra-field ra-field--full">
-                <label className="ra-label">Notes</label>
-                <input className="ra-input" value={locDraft.notes} onChange={e => setLD('notes', e.target.value)} placeholder="Optional context…" />
+                <label className="ra-label">Comments / Notes</label>
+                <textarea
+                  className="ra-input"
+                  style={{ height: '76px', padding: '10px 14px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}
+                  value={locDraft.notes || ''}
+                  onChange={e => setLD('notes', e.target.value)}
+                  placeholder="Add any comments, special instructions, or operational context…"
+                  rows={3}
+                />
               </div>
             </div>
             <div className="ra-drawer-actions">
@@ -1519,7 +1556,7 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
             <table className="ra-table">
               <thead>
                 <tr>
-                  <th>Country</th><th>City</th><th>Type</th><th>Headcount</th><th>Radius</th><th>Criticality</th><th>Threats</th><th>Notes</th><th></th>
+                  <th>Country</th><th>City</th><th>Type</th><th>Headcount</th><th>Criticality</th><th>Notes</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -1531,18 +1568,34 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                       <td>{loc.city || '—'}</td>
                       <td><span className="ra-type-badge">{loc.location_type}</span></td>
                       <td>{loc.headcount !== undefined && loc.headcount !== '' ? Number(loc.headcount).toLocaleString() : '—'}</td>
-                      <td>{loc.radius !== undefined && loc.radius !== '' ? `${loc.radius} km` : '100 km'}</td>
                       <td><span className={`ra-crit-badge ra-crit-badge--${loc.criticality.toLowerCase()}`}>{loc.criticality}</span></td>
-                      <td>
-                        {threatened
-                          ? <span className="ra-threat-cell animate-pulse"> ACTIVE THREAT</span>
-                          : <span className="ra-safe-cell"> Clear</span>}
-                      </td>
-                      <td className="ra-notes-cell">{loc.notes || '—'}</td>
+                      <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 140, maxWidth: 260, fontSize: 11, color: '#374151', lineHeight: 1.5 }}>{loc.notes || '—'}</td>
                       <td>
                         <div className="ra-row-actions">
-                          <button onClick={() => openEditLoc(i)} className="ra-btn-icon"></button>
-                          <button onClick={() => setLocations(l => l.filter((_, j) => j !== i))} className="ra-btn-icon"></button>
+                          <button
+                            type="button"
+                            onClick={() => openEditLoc(i)}
+                            className="ra-btn-icon"
+                            title="Edit Location"
+                            style={{ background: '#f1f5f9', color: '#4f46e5', border: '1px solid #e2e8f0' }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLocations(l => l.filter((_, j) => j !== i))}
+                            className="ra-btn-icon-del"
+                            title="Delete Location"
+                            style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1597,7 +1650,37 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
         {/* Vendor form drawer */}
         {editVendIdx !== null && (
           <div className="ra-drawer">
-            <div className="ra-drawer-title">{editVendIdx === -1 ? 'Add Vendor / Supplier' : 'Edit Vendor'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div className="ra-drawer-title" style={{ margin: 0 }}>
+                {editVendIdx === -1 ? 'Add Vendor / Supplier' : 'Edit Vendor'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditVendIdx(null)}
+                title="Close / Cancel"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  fontWeight: 700
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span>Close</span>
+              </button>
+            </div>
             <div className="ra-fields-grid">
               <div className="ra-field ra-field--lg">
                 <label className="ra-label">Vendor / Supplier Name *</label>
@@ -1726,8 +1809,15 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
                 />
               </div>
               <div className="ra-field ra-field--full">
-                <label className="ra-label">Notes</label>
-                <input className="ra-input" value={vendDraft.notes} onChange={e => setVD('notes', e.target.value)} placeholder="Optional context…" />
+                <label className="ra-label">Comments / Notes</label>
+                <textarea
+                  className="ra-input"
+                  style={{ height: '76px', padding: '10px 14px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}
+                  value={vendDraft.notes || ''}
+                  onChange={e => setVD('notes', e.target.value)}
+                  placeholder="Add any comments, special instructions, or operational context…"
+                  rows={3}
+                />
               </div>
             </div>
             <div className="ra-drawer-actions">
@@ -1750,7 +1840,7 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
             <table className="ra-table">
               <thead>
                 <tr>
-                  <th>Vendor</th><th>Location</th><th>Goods / Services</th><th>Dependency</th><th>Single Source</th><th>Threats</th><th></th>
+                  <th>Vendor</th><th>Location</th><th>Goods / Services</th><th>Dependency</th><th>Single Source</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -1769,11 +1859,32 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
                       </td>
                       <td><span className={`ra-crit-badge ra-crit-badge--${v.dependency_level === 'Critical' ? 'high' : v.dependency_level === 'Important' ? 'medium' : 'low'}`}>{v.dependency_level}</span></td>
                       <td>{v.single_source ? <span className="ra-threat-cell"> Single</span> : <span className="ra-safe-cell">Multi</span>}</td>
-                      <td>{threatened ? <span className="ra-threat-cell animate-pulse"> THREAT</span> : <span className="ra-safe-cell"> Clear</span>}</td>
                       <td>
                         <div className="ra-row-actions">
-                          <button onClick={() => openEditVend(i)} className="ra-btn-icon"></button>
-                          <button onClick={() => setVendors(v2 => v2.filter((_, j) => j !== i))} className="ra-btn-icon"></button>
+                          <button
+                            type="button"
+                            onClick={() => openEditVend(i)}
+                            className="ra-btn-icon"
+                            title="Edit Vendor"
+                            style={{ background: '#f1f5f9', color: '#4f46e5', border: '1px solid #e2e8f0' }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVendors(v2 => v2.filter((_, j) => j !== i))}
+                            className="ra-btn-icon-del"
+                            title="Delete Vendor"
+                            style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>

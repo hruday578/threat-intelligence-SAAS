@@ -743,12 +743,6 @@ export default function MapsPage({
     return markers.length - displayMarkers.length;
   }, [markers, displayMarkers, targetZoneMarker, strictRadiusFilter]);
 
-  // Manual Plot modal trigger state
-  const [placementCoords, setPlacementCoords] = useState(null);
-  const [customHazard, setCustomHazard] = useState('Wildfire');
-  const [customClass, setCustomClass] = useState('ALERT');
-  const [customTitle, setCustomTitle] = useState('');
-
   const geocodeCacheRef = useRef({});
 
   // 1. Unified Article & Demo processing
@@ -1338,38 +1332,7 @@ export default function MapsPage({
   };
 
 
-  // 10. Handler to deploy analyst-placed custom threats
-  const handlePlotCustomThreat = () => {
-    if (!placementCoords) return;
-    const newThreat = {
-      id: `custom-${Date.now()}`,
-      title: customTitle.trim() || `Tactical ${customHazard} Alert Reported`,
-      date: new Date().toISOString(),
-      lat: placementCoords.lat,
-      lon: placementCoords.lng,
-      ai: {
-        classification: customClass,
-        hazard: customHazard,
-        region: `POS [${placementCoords.lat.toFixed(3)}, ${placementCoords.lng.toFixed(3)}]`,
-        urgency: customClass === 'ALERT' ? 'HIGH' : 'LOW',
-        reasoning: 'Tactical node plotted manually by operations desk.',
-        mitigation: customClass === 'ALERT' ? 'Restrict transit through grid sector. Contact nearby employees.' : 'Monitor local alerts.',
-        citizen_action: 'Follow local guidelines.'
-      },
-      sources: [
-        {
-          title: "Operations Console Plot",
-          url: "#",
-          date: new Date().toLocaleTimeString(),
-          source: { title: "Internal Security Desk" }
-        }
-      ]
-    };
 
-    setLiveDemoArticles(prev => [newThreat, ...prev]);
-    setPlacementCoords(null);
-    setCustomTitle('');
-  };
 
   // Custom DivIcon creators
   const createEmployeeIcon = (emp) => {
@@ -1506,7 +1469,7 @@ export default function MapsPage({
           )}
 
           <button onClick={forceManualScan} disabled={scanLoading} className="maps-control-btn maps-control-btn--scan">
-            {scanLoading ? 'Scanning Global Data...' : 'Scan Now'}
+            {scanLoading ? 'Scanning Global Data...' : 'Refresh'}
           </button>
 
           <span className="maps-stat maps-stat--alert">
@@ -1555,18 +1518,7 @@ export default function MapsPage({
                 </svg>
                 Threats ({filteredThreats.length})
               </button>
-              <button onClick={() => setActiveTab('employees')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'employees' ? 'active' : ''}`}>
-                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Team ({filteredEmployees.length})
-              </button>
-              <button onClick={() => { setActiveTab('index'); setCountryFilter(null); }} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'index' ? 'active' : ''}`}>
-                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V11a2 2 0 012-2h1.065M12 21a9 9 0 100-18 9 9 0 000 18z" />
-                </svg>
-                Index ({countryIndexList.length})
-              </button>
+
               <button onClick={() => setActiveTab('settings')} className={`tab-btn flex items-center gap-1.5 ${activeTab === 'settings' ? 'active' : ''}`}>
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -1665,54 +1617,6 @@ export default function MapsPage({
               </div>
             )}
 
-            {/* THREAT INDEX TAB */}
-            {activeTab === 'index' && (
-              <div className="tab-panel flex-col">
-                {countryFilter && (
-                  <div style={{ padding: '6px 10px', background: 'rgba(234,179,8,0.12)', borderBottom: '1px solid rgba(234,179,8,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: '800', color: '#ca8a04', display: 'flex', alignItems: 'center', gap: '3px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> FILTERED: {countryFilter}</span>
-                    <button onClick={() => setCountryFilter(null)} style={{ fontSize: '9px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '2px' }}><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Clear</button>
-                  </div>
-                )}
-                <div className="scrollable-list">
-                  {countryIndexList.length === 0 ? (
-                    <div className="list-empty">No country data yet. Run a scan first.</div>
-                  ) : (
-                    countryIndexList.map((entry, idx) => {
-                      const cfg = THREAT_LEVEL[entry.level];
-                      const isActive = countryFilter === entry.country;
-                      return (
-                        <div
-                          key={entry.country}
-                          onClick={() => {
-                            setCountryFilter(isActive ? null : entry.country);
-                            setActiveTab('threats');
-                          }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                            background: isActive ? 'rgba(234,179,8,0.1)' : 'transparent',
-                            borderLeft: `3px solid ${cfg.border}`,
-                            transition: 'background 0.15s'
-                          }}
-                        >
-                          <div style={{ width: '28px', textAlign: 'center', fontSize: '16px' }}>{cfg.emoji}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: '800', fontSize: '11px', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.country}</div>
-                            <div style={{ fontSize: '9px', color: cfg.border, fontWeight: '700', letterSpacing: '0.04em' }}>{cfg.label}</div>
-                            <div style={{ fontSize: '8px', color: '#64748b', marginTop: '2px' }}>{entry.hazards.slice(0,3).join(' · ')}</div>
-                          </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: '14px', fontWeight: '900', color: cfg.border }}>{entry.count}</div>
-                            <div style={{ fontSize: '7px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>articles</div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* EMPLOYEES TAB */}
             {activeTab === 'employees' && (
@@ -1789,17 +1693,6 @@ export default function MapsPage({
             {activeTab === 'settings' && (
               <div className="tab-panel settings-panel">
                 <div className="settings-section">
-                  <h4 className="settings-title">Tactical Live Simulator</h4>
-                  <p className="settings-desc">Simulate a live satellite threat stream to test warning logic & notifications.</p>
-                  <button onClick={toggleLiveDemo} className={`simulator-toggle-btn ${liveDemoActive ? 'active' : ''}`}>
-                    {liveDemoActive ? <><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Stop Demo Stream</> : <><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg> Start Live Demo Feed</>}
-                  </button>
-                  {liveDemoActive && (
-                    <p className="simulator-pulse-note">Incoming threat events streaming every 20 seconds...</p>
-                  )}
-                </div>
-
-                <div className="settings-section">
                   <h4 className="settings-title">Map Controls</h4>
                   
                   {/* Sound Effect Toggle */}
@@ -1842,10 +1735,7 @@ export default function MapsPage({
                   </div>
                 </div>
 
-                <div className="settings-section" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
-                  <span style={{ fontSize: '8px', fontWeight: '900', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> COMMAND PROTIP</span>
-                  <p style={{ fontSize: '8px', color: '#9ca3af', lineHeight: '1.3' }}>Double-click anywhere on the map to manually plot coordinates and deploy custom threat alerts!</p>
-                </div>
+
                 <div className="settings-section" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
                   <span style={{ fontSize: '8px', fontWeight: '900', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '4px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg> GEOCODE CACHE</span>
                   <p style={{ fontSize: '8px', color: '#9ca3af', lineHeight: '1.3', marginBottom: '8px' }}>If markers appear in the sea, clear the cache to force fresh land-accurate location lookups.</p>
@@ -1972,55 +1862,7 @@ export default function MapsPage({
           </div>
         </div>
 
-        {/* Modal for double-clicking to plot a manual threat */}
-        {placementCoords && (
-          <div className="maps-placement-modal">
-            <div className="modal-header">
-              <span className="modal-title-text">Plot Custom Threat Node</span>
-              <button onClick={() => setPlacementCoords(null)} className="close-btn">&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="modal-coord-badge">
-                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px', marginRight: '3px' }}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> LAT: {placementCoords.lat.toFixed(4)}, LON: {placementCoords.lng.toFixed(4)}
-              </div>
-              
-              <div className="modal-field">
-                <label>Classification</label>
-                <select value={customClass} onChange={e => setCustomClass(e.target.value)}>
-                  <option value="ALERT">⚠ ALERT (Critical threat)</option>
-                  <option value="INFORMATIVE">↳ REPORT (Informational update)</option>
-                </select>
-              </div>
 
-              <div className="modal-field">
-                <label>Hazard Category</label>
-                <select value={customHazard} onChange={e => setCustomHazard(e.target.value)}>
-                  <option value="Wildfire">▲ Wildfire</option>
-                  <option value="Earthquake">◈ Earthquake</option>
-                  <option value="Flooding">≋ Flooding</option>
-                  <option value="Cyberattack">⌨ Cyberattack</option>
-                  <option value="Industrial Fire">◉ Industrial Fire</option>
-                  <option value="Cyclone">↺ Cyclone</option>
-                  <option value="Hazardous Spill">⊛ Hazardous Spill</option>
-                </select>
-              </div>
-
-              <div className="modal-field">
-                <label>Threat Description Title</label>
-                <input 
-                  type="text" 
-                  value={customTitle} 
-                  onChange={e => setCustomTitle(e.target.value)} 
-                  placeholder="e.g. Chemical spill detected in industrial plant sector..."
-                />
-              </div>
-
-              <button onClick={handlePlotCustomThreat} className="plot-btn">
-                Plot coordinates
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Leaflet Map */}
         {combinedArticles.length === 0 && !scanLoading && employeeMarkers.length === 0 ? (
@@ -2029,7 +1871,7 @@ export default function MapsPage({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
             <h2 className="maps-empty-title">No Command Nodes Active</h2>
-            <p className="maps-empty-desc">Click "Scan Now" or toggle "Start Live Demo Feed" in settings to plot live threat data.</p>
+            <p className="maps-empty-desc">Click "Refresh" to plot live threat data.</p>
           </div>
         ) : (
           <MapContainer
@@ -2060,9 +1902,6 @@ export default function MapsPage({
             {/* Auto center map to fit markers */}
             <MapAutoCenter markers={[...markers, ...employeeMarkers]} />
             <MapFlyController flyToCoords={flyToCoords} />
-
-            {/* Double-click listener */}
-            <MapEventsController onMapDblClick={setPlacementCoords} />
 
             {/* National Threat Alert Level Choropleth */}
             {showChoropleth && Object.keys(countryThreatLevels).length > 0 && (
