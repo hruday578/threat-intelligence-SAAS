@@ -15,6 +15,7 @@
  */
 
 import { HAZARD_CONCEPT_URIS } from '../data/hazardConcepts.js';
+import { extractCleanKeyword } from './threatTaxonomy.js';
 
 export function buildUnifiedSearchPlan({
   profile = {},
@@ -86,12 +87,16 @@ export function buildUnifiedSearchPlan({
   const dateStart = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
   const dateEnd = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-  // Compile unique hazard keywords (capped to prevent 15-keyword API limits)
-  const allUniqueHazards = Array.from(new Set([
+  // Compile unique hazard keywords (cleaned & normalized to ensure compatibility with NewsAPI / EventRegistry)
+  const rawHazards = [
     ...companyThreats,
     ...locationThreats.map(l => l.threat),
     ...vendorThreats.map(v => v.threat)
-  ])).filter(Boolean);
+  ].filter(Boolean);
+
+  const allUniqueHazards = Array.from(new Set(
+    rawHazards.map(th => extractCleanKeyword(th) || th)
+  )).filter(Boolean);
 
   // Fallback if no specific hazards selected
   const activeHazards = allUniqueHazards.length > 0 ? allUniqueHazards : ['Cyber Attack', 'Natural Disaster', 'Supply Chain Disruption'];

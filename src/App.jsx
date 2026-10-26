@@ -22,6 +22,7 @@ import { supabase } from './lib/supabase';
 import { deduplicateArticles } from './services/deduplication';
 import { validateNewsApiKey, buildEventRegistryPayload, fetchEventRegistryArticles } from './services/newsIngestion';
 import { buildUnifiedSearchPlan } from './services/searchPlanner';
+import { extractCleanKeyword } from './services/threatTaxonomy';
 import { classifySingleArticle } from './services/articleClassifier';
 import { correlateArticlesIntoEvents } from './services/eventCorrelation';
 
@@ -1694,7 +1695,8 @@ function AppMain() {
 
       // 2. Keywords / Hazards mapping using conceptUri
       if (keywords.length > 0) {
-        const keywordParts = keywords.slice(0, 8).map(kw => {
+        const cleanedKeywords = keywords.map(kw => extractCleanKeyword(kw) || kw).filter(Boolean);
+        const keywordParts = cleanedKeywords.slice(0, 8).map(kw => {
           const normalized = kw.toLowerCase().trim();
           const conceptUri = HAZARD_CONCEPT_URIS[normalized];
           return conceptUri ? { "conceptUri": conceptUri } : { "keyword": kw };
@@ -2629,13 +2631,6 @@ function AppMain() {
                            Personal Safety
                         </span>
                       </div>
-                        {personnelExposure.atRiskEmployees > 0 && (
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                            isDarkMode ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-600 border-rose-100'
-                          }`}>
-                            {personnelExposure.atRiskEmployees} Staff in Alert Zone
-                          </span>
-                        )}
                     </div>
 
                     <h2 className={`text-xs font-black uppercase tracking-widest mb-1 transition-colors ${
@@ -2655,7 +2650,7 @@ function AppMain() {
                       {personnelExposure.atRiskEmployees > 0 ? (
                         <div className="flex items-baseline gap-1">
                           <span className={`text-4xl font-black leading-none ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>{personnelExposure.atRiskEmployees}</span>
-                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>/ {personnelExposure.totalRegistered} At Risk</span>
+                          <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>/ {personnelExposure.totalRegistered} Personal at Risk</span>
                         </div>
                       ) : (
                         <div className="flex items-baseline gap-1.5">
@@ -3522,8 +3517,8 @@ function AppMain() {
                           <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
                             <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6-4a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                                 </svg>
                               </div>
                               <div className="flex-1 min-w-0">
@@ -3626,9 +3621,9 @@ function AppMain() {
                         {/* ── Travel and Mobility Measures ── */}
                         <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
                           <div style={{ background: 'linear-gradient(135deg, #374151 0%, #4b5563 60%, #6b7280 100%)' }} className="px-4 py-3 flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.10)' }}>
-                              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21l16.5-9L3.75 3v6.375L13.5 12l-9.75 2.625V21z" />
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.12)' }}>
+                              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
                               </svg>
                             </div>
                             <div className="flex-1 min-w-0">

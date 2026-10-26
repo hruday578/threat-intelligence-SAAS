@@ -59,15 +59,49 @@ export const THREAT_DOMAINS = {
 export const ALL_HAZARDS = Object.values(THREAT_DOMAINS).flatMap(d => d.hazards);
 
 /**
- * Finds the canonical domain for a given hazard string
+ * Extracts a concise, high-precision search keyword (1-3 words) from complex or narrative threat strings
+ * Suitable for NewsAPI / EventRegistry querying
  */
-export function getDomainForHazard(hazardName) {
-  if (!hazardName || typeof hazardName !== 'string') return null;
-  const target = hazardName.toLowerCase().trim();
-  for (const domain of Object.values(THREAT_DOMAINS)) {
-    if (domain.hazards.some(h => h.toLowerCase() === target || target.includes(h.toLowerCase()))) {
-      return domain;
+export function extractCleanKeyword(threatStr) {
+  if (!threatStr || typeof threatStr !== 'string') return '';
+  const trimmed = threatStr.trim();
+
+  // 1. Direct match with canonical taxonomy
+  const lower = trimmed.toLowerCase();
+  for (const hazard of ALL_HAZARDS) {
+    if (lower === hazard.toLowerCase()) return hazard;
+  }
+
+  // 2. Substring match with canonical taxonomy
+  for (const hazard of ALL_HAZARDS) {
+    const hLow = hazard.toLowerCase();
+    // Match word boundaries so 'war' doesn't match 'hardware'
+    const regex = new RegExp(`\\b${hLow}\\b`, 'i');
+    if (regex.test(trimmed)) {
+      return hazard;
     }
   }
-  return null;
+
+  // 3. Common domain-specific threat patterns
+  if (/mfa\s+fatigue|phishing/i.test(trimmed)) return 'Phishing';
+  if (/sanction/i.test(trimmed)) return 'Sanctions';
+  if (/semiconductor|chip\s+shortage|component\s+shortage/i.test(trimmed)) return 'Component Shortage';
+  if (/ransomware/i.test(trimmed)) return 'Ransomware';
+  if (/data\s*center\s*(outage|fire)/i.test(trimmed)) return 'Power Outage';
+  if (/cloud\s*(breach|outage|compromise)/i.test(trimmed)) return 'Cloud Compromise';
+  if (/supply\s+chain/i.test(trimmed)) return 'Supply Chain Disruption';
+  if (/power\s+(outage|grid|blackout)/i.test(trimmed)) return 'Power Outage';
+
+  // 4. Strip parentheticals and qualifiers
+  let cleaned = trimmed.replace(/\([^)]*\)/g, '').trim();
+  cleaned = cleaned.replace(/^(e\.g\.|threat\s+to|risk\s+of)\s+/i, '');
+  cleaned = cleaned.replace(/^(severe|critical|escalating|regional)\s+/i, '');
+
+  // Keep first 2-3 words if still very long
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length > 3) {
+    return words.slice(0, 3).join(' ');
+  }
+  return cleaned || trimmed;
 }
+

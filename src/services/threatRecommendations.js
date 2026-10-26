@@ -10,7 +10,7 @@
  * schema constraints, confidence levels, rationales, and fallback capability.
  */
 
-import { THREAT_DOMAINS, ALL_HAZARDS } from './threatTaxonomy.js';
+import { THREAT_DOMAINS, ALL_HAZARDS, extractCleanKeyword } from './threatTaxonomy.js';
 
 /**
  * Validates domain format
@@ -65,15 +65,16 @@ ${JSON.stringify(entityData, null, 2)}
 REQUIREMENTS:
 1. Generate between 5 and 8 targeted, highly relevant, comprehensive threat suggestions across diverse threat domains.
 2. Every suggestion must be rooted in the entity's actual geography, industry, facility type, dependency level, or digital footprint.
-3. Distinguish evidence-strength / confidence (HIGH, MEDIUM, LOW) based on real-world patterns.
-4. Output STRICT JSON format as an array of objects matching the schema below.
-5. DO NOT invent fake incidents or claim a disaster is currently ongoing if not verified. Distinguish general exposure from an active incident.
+3. specificThreat MUST be a short, concise canonical hazard or threat keyword (1 to 3 words, e.g. "Ransomware", "Supply Chain Disruption", "Earthquake", "Power Outage", "Phishing", "Sanctions", "Component Shortage"). Do NOT write long full sentences or narrative descriptions in "specificThreat" — put detailed narrative explanations into "rationale" and "evidence".
+4. Distinguish evidence-strength / confidence (HIGH, MEDIUM, LOW) based on real-world patterns.
+5. Output STRICT JSON format as an array of objects matching the schema below.
+6. DO NOT invent fake incidents or claim a disaster is currently ongoing if not verified. Distinguish general exposure from an active incident.
 
 JSON SCHEMA:
 [
   {
     "threatCategory": "Natural Disasters & Severe Weather | Cybersecurity & Data Protection | Geopolitical Conflict & Civil Unrest | Physical, Industrial & Infrastructure Disruption | Supply Chain & Transport Disruption",
-    "specificThreat": "Specific threat name from taxonomy",
+    "specificThreat": "Concise canonical threat name (1-3 words, e.g. Ransomware, Flood, Power Outage)",
     "rationale": "Clear 1-2 sentence operational explanation of why this entity is exposed.",
     "evidence": "Concrete contextual evidence based on location, industry, or dependency attributes.",
     "confidence": "HIGH | MEDIUM | LOW",
@@ -224,19 +225,25 @@ export async function generateThreatRecommendations({
 
   // Format into consistent, auditable schema
   const timestamp = new Date().toISOString();
-  return rawSuggestions.map((item, idx) => ({
-    id: `rec_${entityType.toLowerCase()}_${entityId}_${Date.now()}_${idx}`,
-    entityType,
-    entityId: String(entityId),
-    threatCategory: item.threatCategory || 'General',
-    specificThreat: item.specificThreat || 'Operational Risk',
-    rationale: item.rationale || 'Identified based on entity profile and operating parameters.',
-    evidence: item.evidence || 'Established from entity location, operational criticality, and domain attributes.',
-    confidence: ['HIGH', 'MEDIUM', 'LOW'].includes(item.confidence) ? item.confidence : 'MEDIUM',
-    assumptions: item.assumptions || 'Assumes standard industry operating exposure.',
-    suggestedSearchTerms: Array.isArray(item.suggestedSearchTerms) ? item.suggestedSearchTerms : [item.specificThreat || 'Risk'],
-    status: 'suggested', // 'suggested' | 'accepted' | 'rejected' | 'edited'
-    createdAt: timestamp,
-    updatedAt: timestamp
-  }));
+  return rawSuggestions.map((item, idx) => {
+    const rawSpecific = item.specificThreat || 'Operational Risk';
+    const cleanSpecific = extractCleanKeyword(rawSpecific) || rawSpecific;
+
+    return {
+      id: `rec_${entityType.toLowerCase()}_${entityId}_${Date.now()}_${idx}`,
+      entityType,
+      entityId: String(entityId),
+      threatCategory: item.threatCategory || 'General',
+      specificThreat: cleanSpecific,
+      title: rawSpecific !== cleanSpecific ? rawSpecific : undefined,
+      rationale: item.rationale || 'Identified based on entity profile and operating parameters.',
+      evidence: item.evidence || 'Established from entity location, operational criticality, and domain attributes.',
+      confidence: ['HIGH', 'MEDIUM', 'LOW'].includes(item.confidence) ? item.confidence : 'MEDIUM',
+      assumptions: item.assumptions || 'Assumes standard industry operating exposure.',
+      suggestedSearchTerms: Array.isArray(item.suggestedSearchTerms) ? item.suggestedSearchTerms : [cleanSpecific],
+      status: 'suggested', // 'suggested' | 'accepted' | 'rejected' | 'edited'
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+  });
 }

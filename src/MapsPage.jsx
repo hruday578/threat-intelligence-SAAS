@@ -1721,14 +1721,6 @@ export default function MapsPage({
                   <h4 className="settings-title">Map Layers Toggles</h4>
                   <div className="toggles-list">
                     <label className="checkbox-label">
-                      <input type="checkbox" checked={showEmployees} onChange={e => setShowEmployees(e.target.checked)} />
-                      <span className="checkbox-custom green" /> Show Employees
-                    </label>
-                    <label className="checkbox-label">
-                      <input type="checkbox" checked={showCorridors} onChange={e => setShowCorridors(e.target.checked)} />
-                      <span className="checkbox-custom red" /> Threat Danger Corridors
-                    </label>
-                    <label className="checkbox-label">
                       <input type="checkbox" checked={showChoropleth} onChange={e => setShowChoropleth(e.target.checked)} />
                       <span className="checkbox-custom" style={{ background: showChoropleth ? '#dc2626' : undefined }} /> <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style={{ verticalAlign: '-1px' }}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> National Alert Levels
                     </label>
@@ -1923,27 +1915,7 @@ export default function MapsPage({
               />
             ))}
 
-            {/* Threat Danger Corridors (lines linking at-risk employees to threats) */}
-            {showCorridors && showEmployees && highRiskEmployees.map((emp, idx) => (
-              <Polyline
-                key={`line-${idx}`}
-                positions={[[emp.lat, emp.lon], [emp.closestAlert.lat, emp.closestAlert.lon]]}
-                pathOptions={{
-                  color: '#ef4444',
-                  weight: 2,
-                  dashArray: '8, 12',
-                  className: 'pulse-line-danger'
-                }}
-              >
-                <Popup>
-                  <div className="maps-popup-content">
-                    <span className="maps-popup-badge maps-popup-badge--alert" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> CLOSE THREAT PROXIMITY</span>
-                    <h4 className="font-bold text-red-600 mt-1">{emp.firstName} {emp.lastName} at Risk</h4>
-                    <p className="text-xs text-gray-400 mt-1">Located {Math.round(emp.distanceToAlert)}km from <strong>{emp.closestAlert.ai?.hazard}</strong> in {emp.closestAlert.ai?.region}.</p>
-                  </div>
-                </Popup>
-              </Polyline>
-            ))}
+
 
             {/* Target Zone Radius Circle & Marker */}
             {targetZoneMarker && (
@@ -2068,16 +2040,6 @@ export default function MapsPage({
                 position={[art.lat, art.lon]}
                 icon={art._isGlobal ? createGlobalIcon('INFORMATIVE') : createInfoIcon()}
                 eventHandlers={{ click: () => handleSelectThreat(art) }}
-              />
-            ))}
-
-            {/* Employees (Teal/Green Markers) */}
-            {showEmployees && employeeMarkers.map((emp, idx) => (
-              <Marker
-                key={`emp-${idx}`}
-                position={[emp.lat, emp.lon]}
-                icon={createEmployeeIcon(emp)}
-                eventHandlers={{ click: () => handleSelectEmployee(emp) }}
               />
             ))}
 

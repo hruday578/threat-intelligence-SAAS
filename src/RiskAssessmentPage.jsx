@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { generateThreatRecommendations, isValidDomain, extractDomainContext } from './services/threatRecommendations';
+import { extractCleanKeyword } from './services/threatTaxonomy';
 
 // Fix Leaflet default icon path broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -1189,12 +1190,20 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete, provider, a
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {profile.threat_suggestions.map(s => {
-                    const isAccepted = (profile.target_hazards || []).includes(s.specificThreat);
+                    const cleanThreat = extractCleanKeyword(s.specificThreat) || s.specificThreat;
+                    const isAccepted = (profile.target_hazards || []).some(h => 
+                      h.toLowerCase() === cleanThreat.toLowerCase() || h.toLowerCase() === s.specificThreat.toLowerCase()
+                    );
                     return (
                       <div key={s.id} style={{ background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 11, fontWeight: 800, color: '#1e293b' }}>{s.specificThreat}</span>
+                            {cleanThreat !== s.specificThreat && (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '1px 5px', borderRadius: 4 }}>
+                                Query: {cleanThreat}
+                              </span>
+                            )}
                             <span style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: 4 }}>{s.threatCategory}</span>
                             <span style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: s.confidence === 'HIGH' ? '#fef2f2' : '#fffbeb', color: s.confidence === 'HIGH' ? '#dc2626' : '#d97706', padding: '1px 6px', borderRadius: 4 }}>
                               {s.confidence} Confidence
@@ -1204,9 +1213,11 @@ function StepProfile({ profile, setP, activeProfileId, handleDelete, provider, a
                             type="button"
                             onClick={() => {
                               if (isAccepted) {
-                                setP('target_hazards', (profile.target_hazards || []).filter(h => h !== s.specificThreat));
+                                setP('target_hazards', (profile.target_hazards || []).filter(h => 
+                                  h.toLowerCase() !== cleanThreat.toLowerCase() && h.toLowerCase() !== s.specificThreat.toLowerCase()
+                                ));
                               } else {
-                                setP('target_hazards', [...(profile.target_hazards || []), s.specificThreat]);
+                                setP('target_hazards', [...(profile.target_hazards || []), cleanThreat]);
                               }
                             }}
                             style={{
@@ -1481,7 +1492,10 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {locDraft.threat_suggestions.map(s => {
-                        const isAccepted = (locDraft.accepted_threats || []).includes(s.specificThreat);
+                        const cleanThreat = extractCleanKeyword(s.specificThreat) || s.specificThreat;
+                        const isAccepted = (locDraft.accepted_threats || []).some(h => 
+                          h.toLowerCase() === cleanThreat.toLowerCase() || h.toLowerCase() === s.specificThreat.toLowerCase()
+                        );
                         return (
                           <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 6, padding: '6px 8px' }}>
                             <div>
@@ -1493,9 +1507,11 @@ function StepLocations({ locations, setLocations, locDraft, setLocDraft, editLoc
                               type="button"
                               onClick={() => {
                                 if (isAccepted) {
-                                  setLD('accepted_threats', (locDraft.accepted_threats || []).filter(h => h !== s.specificThreat));
+                                  setLD('accepted_threats', (locDraft.accepted_threats || []).filter(h => 
+                                    h.toLowerCase() !== cleanThreat.toLowerCase() && h.toLowerCase() !== s.specificThreat.toLowerCase()
+                                  ));
                                 } else {
-                                  setLD('accepted_threats', [...(locDraft.accepted_threats || []), s.specificThreat]);
+                                  setLD('accepted_threats', [...(locDraft.accepted_threats || []), cleanThreat]);
                                 }
                               }}
                               style={{
@@ -1766,7 +1782,10 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {vendDraft.threat_suggestions.map(s => {
-                        const isAccepted = (vendDraft.accepted_threats || []).includes(s.specificThreat);
+                        const cleanThreat = extractCleanKeyword(s.specificThreat) || s.specificThreat;
+                        const isAccepted = (vendDraft.accepted_threats || []).some(h => 
+                          h.toLowerCase() === cleanThreat.toLowerCase() || h.toLowerCase() === s.specificThreat.toLowerCase()
+                        );
                         return (
                           <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: isAccepted ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: 6, padding: '6px 8px' }}>
                             <div>
@@ -1778,9 +1797,11 @@ function StepVendors({ vendors, setVendors, vendDraft, setVendDraft, editVendIdx
                               type="button"
                               onClick={() => {
                                 if (isAccepted) {
-                                  setVD('accepted_threats', (vendDraft.accepted_threats || []).filter(h => h !== s.specificThreat));
+                                  setVD('accepted_threats', (vendDraft.accepted_threats || []).filter(h => 
+                                    h.toLowerCase() !== cleanThreat.toLowerCase() && h.toLowerCase() !== s.specificThreat.toLowerCase()
+                                  ));
                                 } else {
-                                  setVD('accepted_threats', [...(vendDraft.accepted_threats || []), s.specificThreat]);
+                                  setVD('accepted_threats', [...(vendDraft.accepted_threats || []), cleanThreat]);
                                 }
                               }}
                               style={{
