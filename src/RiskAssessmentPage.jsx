@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { generateThreatRecommendations, isValidDomain, extractDomainContext } from './services/threatRecommendations';
 import { extractCleanKeyword } from './services/threatTaxonomy';
+import { supabase } from './lib/supabase';
 
 // Fix Leaflet default icon path broken by bundlers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -502,16 +503,18 @@ const SAMPLE_RECORD = {
 };
 
 //  Utility helpers 
-function loadProfiles() {
+function normalizeProfileRecord(p) {
+  if (p && p.profile && typeof p.profile.target_hazards === 'string') {
+    p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return p;
+}
+
+function loadLocalProfiles() {
   try {
     let list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     if (list && list.length > 0) {
-      list = list.map(p => {
-        if (p.profile && typeof p.profile.target_hazards === 'string') {
-          p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
-        }
-        return p;
-      });
+      list = list.map(normalizeProfileRecord);
     }
     if (!list || list.length === 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([SAMPLE_RECORD]));
@@ -522,8 +525,52 @@ function loadProfiles() {
     return [SAMPLE_RECORD];
   }
 }
-function saveProfiles(profiles) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+
+function saveLocalProfiles(profiles) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+}
+
+async function fetchOrgProfiles(orgId) {
+  if (!orgId) return loadLocalProfiles();
+  try {
+    const { data, error } = await supabase
+      .from('risk_profiles')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.warn('Supabase fetch risk_profiles error, using local fallback:', error);
+      return loadLocalProfiles();
+    }
+
+    if (data && data.length > 0) {
+      const mapped = data.map(row => normalizeProfileRecord({
+        id: row.id,
+        profile: row.profile || { ...EMPTY_PROFILE },
+        locations: row.locations || [],
+        vendors: row.vendors || [],
+        risk_score: row.risk_score || 0,
+        saved_at: row.updated_at || row.saved_at || new Date().toISOString(),
+        org_id: row.org_id,
+        user_id: row.user_id,
+      }));
+      // Cache to localStorage
+      saveLocalProfiles(mapped);
+      return mapped;
+    }
+
+    // If org has no records in database yet, check local storage or sample
+    const local = loadLocalProfiles();
+    return local.length > 0 ? local : [SAMPLE_RECORD];
+  } catch (err) {
+    console.error('Error fetching org profiles from Supabase:', err);
+    return loadLocalProfiles();
+  }
 }
 
 function computeRiskScore(profile, locations, vendors) {
@@ -801,7 +848,15 @@ function RiskScoreRing({ score }) {
 }
 
 //  Main Component 
-export default function RiskAssessmentPage({ articles = [], initialTab = 'profile', provider = 'groq-120b', aiKey = '', isDarkMode = false }) {
+export default function RiskAssessmentPage({
+  articles = [],
+  initialTab = 'profile',
+  provider = 'groq-120b',
+  aiKey = '',
+  isDarkMode = false,
+  organization = null,
+  user = null
+}) {
   const [step, setStep] = useState(initialTab === 'summary' ? 'profile' : initialTab);
   const [profile, setProfile] = useState({ ...EMPTY_PROFILE });
   const [locations, setLocations] = useState([]);
@@ -815,14 +870,20 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
   const [locDraft, setLocDraft] = useState({ ...EMPTY_LOCATION });
   const [vendDraft, setVendDraft] = useState({ ...EMPTY_VENDOR });
 
-  // Load profiles on mount
+  // Load profiles on mount & when organization changes
   useEffect(() => {
-    const list = loadProfiles();
-    setSavedProfiles(list);
-    if (list.length > 0 && !profile.company_name) {
-      handleLoad(list[0], false); // false = don't reset tab on auto-load
+    let isCancelled = false;
+    async function loadData() {
+      const list = await fetchOrgProfiles(organization?.id);
+      if (isCancelled) return;
+      setSavedProfiles(list);
+      if (list.length > 0 && !profile.company_name) {
+        handleLoad(list[0], false); // false = don't reset tab on auto-load
+      }
     }
-  }, []);
+    loadData();
+    return () => { isCancelled = true; };
+  }, [organization?.id]);
 
   const riskScore = computeRiskScore(profile, locations, vendors);
 
@@ -853,26 +914,78 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
   });
 
   //  Persistence helpers 
-  const handleSave = () => {
-    const profiles = loadProfiles();
+  const handleSave = async () => {
+    setSaveStatus(' Saving...');
+    const nowIso = new Date().toISOString();
+    let recordId = activeProfileId;
+
+    // 1. Supabase sync if organization exists
+    if (organization?.id) {
+      try {
+        const payload = {
+          org_id: organization.id,
+          user_id: user?.id || null,
+          profile,
+          locations,
+          vendors,
+          risk_score: riskScore,
+          updated_at: nowIso,
+        };
+
+        if (recordId && typeof recordId === 'number' && recordId < 1000000000000) {
+          // Likely a Supabase BIGSERIAL id
+          const { error } = await supabase
+            .from('risk_profiles')
+            .update(payload)
+            .eq('id', recordId)
+            .eq('org_id', organization.id);
+          if (error) throw error;
+        } else {
+          // New insert
+          const { data, error } = await supabase
+            .from('risk_profiles')
+            .insert([{ ...payload, saved_at: nowIso }])
+            .select();
+          if (error) throw error;
+          if (data && data[0]) {
+            recordId = data[0].id;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to save to Supabase:', err);
+      }
+    }
+
+    if (!recordId) recordId = Date.now();
+
     const record = {
-      id: activeProfileId || Date.now(),
-      profile, locations, vendors,
+      id: recordId,
+      profile,
+      locations,
+      vendors,
       risk_score: riskScore,
-      saved_at: new Date().toISOString(),
+      saved_at: nowIso,
+      org_id: organization?.id,
+      user_id: user?.id,
     };
-    const idx = profiles.findIndex(p => p.id === record.id);
-    if (idx >= 0) profiles[idx] = record;
-    else profiles.unshift(record);
-    saveProfiles(profiles);
-    setSavedProfiles(profiles);
+
+    // 2. Local state & localStorage fallback cache update
+    setSavedProfiles(prev => {
+      const idx = prev.findIndex(p => p.id === record.id);
+      const updated = [...prev];
+      if (idx >= 0) updated[idx] = record;
+      else updated.unshift(record);
+      saveLocalProfiles(updated);
+      return updated;
+    });
+
     setActiveProfileId(record.id);
     setSaveStatus(' Saved');
     setTimeout(() => setSaveStatus(''), 2500);
   };
 
   const handleLoad = (rec, resetStep = true) => {
-    setProfile(rec.profile);
+    setProfile(rec.profile || { ...EMPTY_PROFILE });
     setLocations(rec.locations || []);
     setVendors(rec.vendors || []);
     setActiveProfileId(rec.id);
@@ -880,15 +993,35 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
     if (resetStep) setStep('profile');
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!id) return;
-    if (window.confirm("Are you sure you want to delete this company risk profile? This action cannot be undone.")) {
-      const profiles = loadProfiles().filter(p => p.id !== id);
-      saveProfiles(profiles);
-      setSavedProfiles(profiles);
-      if (activeProfileId === id) {
-        setProfile({ ...EMPTY_PROFILE }); setLocations([]); setVendors([]); setActiveProfileId(null);
+    if (!window.confirm("Are you sure you want to delete this company risk profile? This action cannot be undone.")) {
+      return;
+    }
+
+    if (organization?.id && typeof id === 'number' && id < 1000000000000) {
+      try {
+        await supabase
+          .from('risk_profiles')
+          .delete()
+          .eq('id', id)
+          .eq('org_id', organization.id);
+      } catch (err) {
+        console.error('Failed to delete from Supabase:', err);
       }
+    }
+
+    setSavedProfiles(prev => {
+      const filtered = prev.filter(p => p.id !== id);
+      saveLocalProfiles(filtered);
+      return filtered;
+    });
+
+    if (activeProfileId === id) {
+      setProfile({ ...EMPTY_PROFILE });
+      setLocations([]);
+      setVendors([]);
+      setActiveProfileId(null);
     }
   };
 
@@ -1006,11 +1139,11 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 onClick={() => {
-                  const list = loadProfiles();
+                  const list = loadLocalProfiles();
                   const exists = list.find(p => p.id === SAMPLE_RECORD.id);
                   if (!exists) {
                     const updated = [SAMPLE_RECORD, ...list];
-                    saveProfiles(updated);
+                    saveLocalProfiles(updated);
                     setSavedProfiles(updated);
                   }
                   handleLoad(SAMPLE_RECORD);

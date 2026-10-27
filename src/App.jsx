@@ -1329,30 +1329,67 @@ function AppMain() {
   const [savedProfiles, setSavedProfiles] = useState([]);
   const [selectedProfileId, setSelectedProfileId] = useState('none');
 
-  // Load saved profiles from localStorage on mount & page changes
+  // Load saved profiles from Supabase or localStorage on mount & page/org changes
   // Applies migration: converts legacy string target_hazards to arrays
   useEffect(() => {
-    try {
-      let stored = JSON.parse(localStorage.getItem('alertem_risk_profiles') || '[]');
-      if (stored && stored.length > 0) {
-        stored = stored.map(p => {
-          if (p.profile) {
-            // Migrate legacy string hazards to array
-            if (typeof p.profile.target_hazards === 'string') {
-              p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
-            }
-            if (!Array.isArray(p.profile.target_hazards)) {
-              p.profile.target_hazards = [];
-            }
-          }
-          return p;
-        });
+    let isCancelled = false;
+    const normalize = (p) => {
+      if (p && p.profile) {
+        if (typeof p.profile.target_hazards === 'string') {
+          p.profile.target_hazards = p.profile.target_hazards.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        if (!Array.isArray(p.profile.target_hazards)) {
+          p.profile.target_hazards = [];
+        }
       }
-      setSavedProfiles(stored);
-    } catch (e) {
-      console.error(e);
+      return p;
+    };
+
+    async function loadData() {
+      if (organization?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('risk_profiles')
+            .select('*')
+            .eq('org_id', organization.id)
+            .order('updated_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            if (isCancelled) return;
+            const mapped = data.map(row => normalize({
+              id: row.id,
+              profile: row.profile || {},
+              locations: row.locations || [],
+              vendors: row.vendors || [],
+              risk_score: row.risk_score || 0,
+              saved_at: row.updated_at || row.saved_at,
+              org_id: row.org_id,
+              user_id: row.user_id,
+            }));
+            setSavedProfiles(mapped);
+            try { localStorage.setItem('alertem_risk_profiles', JSON.stringify(mapped)); } catch (_) {}
+            return;
+          }
+        } catch (e) {
+          console.warn('Could not fetch profiles from Supabase for App header, falling back to local:', e);
+        }
+      }
+
+      // Local fallback
+      try {
+        let stored = JSON.parse(localStorage.getItem('alertem_risk_profiles') || '[]');
+        if (stored && stored.length > 0) {
+          stored = stored.map(normalize);
+        }
+        if (!isCancelled) setSavedProfiles(stored);
+      } catch (e) {
+        console.error(e);
+      }
     }
-  }, [activePage]);
+
+    loadData();
+    return () => { isCancelled = true; };
+  }, [activePage, organization?.id]);
 
   // Populates values from selected profile
   const populateFromProfile = (targetProfile) => {
@@ -2407,6 +2444,8 @@ function AppMain() {
             provider="groq-120b"
             aiKey={aiKey}
             isDarkMode={isDarkMode}
+            organization={organization}
+            user={user}
           />
         )}
         {activePage === 'earthquake-response' && <EarthquakeResponsePage activeArticle={activeArticle} onNavigate={setActivePage} isDarkMode={isDarkMode} />}
