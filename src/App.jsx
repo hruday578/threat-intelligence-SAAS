@@ -2465,17 +2465,6 @@ function AppMain() {
           }`}>
             <div className="flex items-center gap-6">
               <Logo className="h-16" isDarkMode={isDarkMode} />
-              {organization && (
-                <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full border ${
-                  isDarkMode ? 'bg-red-950/40 border-red-900/60' : 'bg-red-50 border-red-100'
-                }`}>
-                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${
-                    isDarkMode ? 'text-red-400' : 'text-red-700'
-                  }`}>{organization.name}</span>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-600 text-white uppercase">{organization.plan || 'Free'}</span>
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-4">
 
