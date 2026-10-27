@@ -540,8 +540,7 @@ async function fetchOrgProfiles(orgId) {
     const { data, error } = await supabase
       .from('risk_profiles')
       .select('*')
-      .eq('org_id', orgId)
-      .order('updated_at', { ascending: false });
+      .eq('org_id', orgId);
 
     if (error) {
       console.warn('Supabase fetch risk_profiles error, using local fallback:', error);
@@ -549,13 +548,16 @@ async function fetchOrgProfiles(orgId) {
     }
 
     if (data && data.length > 0) {
+      // Sort in JS to avoid 400 if column name varies
+      data.sort((a, b) => new Date(b.updated_at || b.created_at || b.saved_at || 0) - new Date(a.updated_at || a.created_at || a.saved_at || 0));
+
       const mapped = data.map(row => normalizeProfileRecord({
         id: row.id,
         profile: row.profile || { ...EMPTY_PROFILE },
         locations: row.locations || [],
         vendors: row.vendors || [],
         risk_score: row.risk_score || 0,
-        saved_at: row.updated_at || row.saved_at || new Date().toISOString(),
+        saved_at: row.updated_at || row.created_at || row.saved_at || new Date().toISOString(),
         org_id: row.org_id,
         user_id: row.user_id,
       }));
@@ -920,39 +922,46 @@ export default function RiskAssessmentPage({
     let recordId = activeProfileId;
 
     // 1. Supabase sync if organization exists
+    console.log('[RiskAssessment] handleSave triggered. org_id:', organization?.id);
     if (organization?.id) {
       try {
         const payload = {
           org_id: organization.id,
-          user_id: user?.id || null,
           profile,
           locations,
           vendors,
           risk_score: riskScore,
-          updated_at: nowIso,
         };
 
-        if (recordId && typeof recordId === 'number' && recordId < 1000000000000) {
-          // Likely a Supabase BIGSERIAL id
+        const isExistingDbRecord = recordId && (
+          (typeof recordId === 'number' && recordId < 1000000000000) ||
+          (typeof recordId === 'string' && recordId.includes('-'))
+        );
+
+        if (isExistingDbRecord) {
+          console.log('[RiskAssessment] Updating Supabase record:', recordId);
           const { error } = await supabase
             .from('risk_profiles')
             .update(payload)
             .eq('id', recordId)
             .eq('org_id', organization.id);
-          if (error) throw error;
+          if (error) console.error('[RiskAssessment] Supabase UPDATE error:', error);
+          else console.log('[RiskAssessment] Supabase UPDATE success!');
         } else {
-          // New insert
+          console.log('[RiskAssessment] Inserting new Supabase record for org:', organization.id);
           const { data, error } = await supabase
             .from('risk_profiles')
-            .insert([{ ...payload, saved_at: nowIso }])
+            .insert([payload])
             .select();
-          if (error) throw error;
-          if (data && data[0]) {
+          if (error) {
+            console.error('[RiskAssessment] Supabase INSERT error:', error);
+          } else if (data && data[0]) {
+            console.log('[RiskAssessment] Supabase INSERT success! ID:', data[0].id);
             recordId = data[0].id;
           }
         }
       } catch (err) {
-        console.error('Failed to save to Supabase:', err);
+        console.error('[RiskAssessment] Failed to save to Supabase:', err);
       }
     }
 

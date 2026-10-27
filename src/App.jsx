@@ -1351,18 +1351,18 @@ function AppMain() {
           const { data, error } = await supabase
             .from('risk_profiles')
             .select('*')
-            .eq('org_id', organization.id)
-            .order('updated_at', { ascending: false });
+            .eq('org_id', organization.id);
 
           if (!error && data && data.length > 0) {
             if (isCancelled) return;
+            data.sort((a, b) => new Date(b.updated_at || b.created_at || b.saved_at || 0) - new Date(a.updated_at || a.created_at || a.saved_at || 0));
             const mapped = data.map(row => normalize({
               id: row.id,
               profile: row.profile || {},
               locations: row.locations || [],
               vendors: row.vendors || [],
               risk_score: row.risk_score || 0,
-              saved_at: row.updated_at || row.saved_at,
+              saved_at: row.updated_at || row.created_at || row.saved_at,
               org_id: row.org_id,
               user_id: row.user_id,
             }));
