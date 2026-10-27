@@ -1031,7 +1031,7 @@ export default function RiskAssessmentPage({ articles = [], initialTab = 'profil
                 <div className="ra-profile-item-info" onClick={() => handleLoad(rec)}>
                   <span className="ra-profile-item-name">{rec.profile?.company_name || 'Unnamed'}</span>
                   <span className="ra-profile-item-meta">{rec.profile?.industry} · {rec.locations?.length} locations · {rec.vendors?.length} vendors</span>
-                  <span className="ra-profile-item-date">{new Date(rec.saved_at).toLocaleDateString()}</span>
+                  <span className="ra-profile-item-date">{new Date(rec.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase()}</span>
                 </div>
                 <span className="ra-profile-score-badge" style={{ color: sc.text, background: sc.bg }}>
                   {rec.risk_score}/100

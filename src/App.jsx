@@ -1259,7 +1259,7 @@ function AppMain() {
     const logEntry = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toLocaleTimeString(),
-      date: new Date().toLocaleDateString('en-GB'),
+      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase(),
       type, // 'AUTH', 'ANALYSIS', 'CONFIG', 'ERROR', 'INFO'
       title: title || type,
       message,
@@ -1708,17 +1708,27 @@ function AppMain() {
         }
       }
 
-      // 3. Locations mapping using conceptUri
-      if (params.cities.length) {
-        queryConditions.push({ "$or": params.cities.slice(0, 5).map(c => ({ "conceptUri": c.uri })) });
-      } else if (params.states.length) {
-        queryConditions.push({ "$or": params.states.slice(0, 5).map(s => ({ "conceptUri": s.uri })) });
-      } else if (params.locs.length) {
-        queryConditions.push({ "$or": params.locs.slice(0, 6).map(l => ({ "conceptUri": l.uri })) });
+      // 3. Locations mapping - Check if we should use Option B (Location-Partitioned Retrieval)
+      // When multiple locations (e.g. India + Bangladesh) are selected, partition into individual per-location queries (up to 3)
+      // to guarantee equal representation and prevent one high-volume country from drowning out others.
+      const selectedLocations = params.cities.length
+        ? params.cities.slice(0, 3).map(c => ({ label: c.label || 'City', filter: { "conceptUri": c.uri } }))
+        : params.states.length
+        ? params.states.slice(0, 3).map(s => ({ label: s.label || 'State', filter: { "conceptUri": s.uri } }))
+        : params.locs.length
+        ? params.locs.slice(0, 3).map(l => ({ label: l.label || 'Country', filter: { "conceptUri": l.uri } }))
+        : [];
+
+      const shouldPartition = selectedLocations.length > 1;
+
+      if (!shouldPartition && selectedLocations.length === 1) {
+        queryConditions.push(selectedLocations[0].filter);
+      } else if (!shouldPartition && selectedLocations.length === 0) {
+        // No explicit country/city selected
       }
 
       // 3b. Local Target Zones filter (e.g. Dadar)
-      if (activeZones.length > 0 && (radius > 0 || !params.locs.length)) {
+      if (activeZones.length > 0 && (radius > 0 || !selectedLocations.length)) {
         const cleanZones = activeZones.map(z => z.replace(/[!?,;]+$/, '').trim()).filter(Boolean);
         if (cleanZones.length > 0) {
           const zoneParts = cleanZones.map(z => ({ "keyword": z }));
@@ -1841,7 +1851,47 @@ function AppMain() {
       };
 
       let raw = [];
-      if (params.prefSrc && params.prefSrc.length > 0) {
+
+      // ── EXECUTE QUERY (PARTITIONED BY LOCATION IF MULTIPLE LOCATIONS SELECTED) ──
+      if (shouldPartition) {
+        addLog('QUERY', 'Location-Partitioned Retrieval', 
+          `Executing parallel queries across ${selectedLocations.length} locations (${selectedLocations.map(l => l.label).join(', ')}) to guarantee balanced representation.`,
+          { locations: selectedLocations.map(l => l.label) }
+        );
+
+        // Fetch articles in parallel for each location (e.g. India + Bangladesh)
+        const locationPromises = selectedLocations.map(async (loc) => {
+          const locQueryParts = [...queryParts, loc.filter];
+          try {
+            const res = await fetchNews(locQueryParts, 40);
+            const articles = res?.articles?.results || [];
+            console.log(`[Partitioned Fetch] Location "${loc.label}": retrieved ${articles.length} articles.`);
+            return { location: loc.label, articles };
+          } catch (err) {
+            console.warn(`[Partitioned Fetch] Error for location "${loc.label}":`, err.message);
+            return { location: loc.label, articles: [] };
+          }
+        });
+
+        const partitionedResults = await Promise.all(locationPromises);
+
+        // Fair-share interleave: take articles evenly from each location
+        const maxLen = Math.max(...partitionedResults.map(p => p.articles.length), 0);
+        const mergedArticles = [];
+        for (let i = 0; i < maxLen; i++) {
+          for (const p of partitionedResults) {
+            if (p.articles[i]) {
+              mergedArticles.push(p.articles[i]);
+            }
+          }
+        }
+        raw = mergedArticles;
+
+        addLog('ANALYSIS', 'Partitioned Results Balanced', 
+          `Merged ${raw.length} articles evenly: ${partitionedResults.map(p => `${p.location} (${p.articles.length})`).join(', ')}.`,
+          { breakdown: partitionedResults.map(p => ({ location: p.location, count: p.articles.length })) }
+        );
+      } else if (params.prefSrc && params.prefSrc.length > 0) {
         //  sourceUri inside $query/$or is the correct EventRegistry syntax for POST requests
         const srcFilter = { "$or": params.prefSrc.map(s => ({ "sourceUri": s.uri })) };
         const prefParts = [...queryParts, srcFilter];
@@ -2300,7 +2350,7 @@ function AppMain() {
             <span className={`px-2 py-0.5 rounded text-[7px] font-black uppercase ${art.ai.classification === 'ALERT' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{art.ai.classification}</span>
             {pushedAlerts.has(art.id) && <span className="px-2 py-0.5 rounded text-[7px] font-black uppercase bg-green-500 text-white">PUSHED</span>}
           </div>
-          <span className="text-[8px] font-bold text-gray-300">{new Date(art.date).toLocaleDateString('en-GB')}</span>
+          <span className="text-[8px] font-bold text-gray-300">{new Date(art.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase()}</span>
         </div>
         <h3 className={`text-[11px] font-black leading-tight mb-2 ${art.ai.classification === 'ALERT' ? 'text-red-600' : 'text-gray-900'}`}>{art.title}</h3>
         <div className="flex items-center justify-between">
@@ -3399,7 +3449,7 @@ function AppMain() {
                           <span>{art.ai?.exact_location || art.ai?.region || 'Global'}</span>
                         </p>
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString('en-GB')}</span>
+                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{new Date(art.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase()}</span>
                           <div className="flex items-center gap-2">
                             {art.ai?.urgency === 'HIGH' && isAlert && <span className="text-[11px] font-semibold text-red-600 animate-pulse">URGENT</span>}
                             {/* Send via Email — broadcasts to employees in same country */}
@@ -3813,7 +3863,7 @@ function AppMain() {
                       const subject = encodeURIComponent(`[ThreatLazer.AI ${art.ai.classification}] ${art.ai.hazard} — ${art.ai.region}`);
                       const body = encodeURIComponent(
                         `THREATLAZER.AI INTELLIGENCE BRIEF\n${'='.repeat(50)}\n\n` +
-                        `STATUS    : ${art.ai.classification}\nHAZARD    : ${art.ai.hazard}\nREGION    : ${art.ai.region}\nURGENCY   : ${art.ai.urgency || 'N/A'}\nDATE      : ${new Date(art.date).toLocaleDateString()}\n\n` +
+                        `STATUS    : ${art.ai.classification}\nHAZARD    : ${art.ai.hazard}\nREGION    : ${art.ai.region}\nURGENCY   : ${art.ai.urgency || 'N/A'}\nDATE      : ${new Date(art.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase()}\n\n` +
                         `HEADLINE\n--------\n${art.title}\n\n` +
                         `AI REASONING\n------------\n${art.ai.reasoning || 'N/A'}\n\n` +
                         `MITIGATION STRATEGY\n-------------------\n${art.ai.mitigation || 'N/A'}\n\n` +
