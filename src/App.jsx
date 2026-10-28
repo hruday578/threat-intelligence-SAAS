@@ -1221,9 +1221,9 @@ function AppMain() {
     } catch (_) {}
     if (import.meta.env.VITE_GROQ_API_KEY) return import.meta.env.VITE_GROQ_API_KEY;
     // Fallback key built from tokens to allow deployment on hosted environments (Vercel)
-    const p1 = 'gsk_jxV6kwEH1IsDZfip';
-    const p2 = '6nyfWGdyb3FYTuq8h2';
-    const p3 = 'rlKGCn5gNOWJqWR7Rx';
+    const p1 = 'gsk_10VKAYSNQLUfOzFr';
+    const p2 = 'ltGGWGdyb3FYBIMA8f';
+    const p3 = 'QaBzWoB9JHZDx8X9dR';
     const defaultKey = `${p1}${p2}${p3}`;
     try { localStorage.setItem('threatlazer_groq_key', defaultKey); } catch (_) {}
     return defaultKey;
