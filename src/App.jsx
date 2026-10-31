@@ -1414,15 +1414,28 @@ function AppMain() {
     vendors.forEach(v => { if (v.vendor_country) addCountry(v.vendor_country); });
 
     const matchedLocs = rawCountries.map(cName => {
-      const lower = cName.toLowerCase();
-      const match = ENHANCED_COUNTRIES.find(c => {
-        const cLower = c.name.toLowerCase();
-        return cLower === lower ||
-          (lower === 'united states' || lower === 'usa' || lower === 'us' ? cLower.includes('united states') : false) ||
-          (lower === 'uk' || lower === 'united kingdom' ? cLower.includes('united kingdom') : false) ||
-          (lower === 'uae' ? cLower.includes('united arab emirates') : false) ||
-          cLower.includes(lower);
-      });
+      const lower = cName.toLowerCase().trim();
+      // 1. Exact match first
+      let match = ENHANCED_COUNTRIES.find(c => c.name.toLowerCase().trim() === lower);
+      // 2. Common aliases (USA, UK, UAE)
+      if (!match) {
+        if (lower === 'united states' || lower === 'usa' || lower === 'us') {
+          match = ENHANCED_COUNTRIES.find(c => c.code === 'US' || c.name === 'United States of America');
+        } else if (lower === 'uk' || lower === 'united kingdom' || lower === 'england') {
+          match = ENHANCED_COUNTRIES.find(c => c.code === 'GB' || c.name === 'United Kingdom');
+        } else if (lower === 'uae') {
+          match = ENHANCED_COUNTRIES.find(c => c.code === 'AE');
+        } else if (lower === 'india') {
+          match = ENHANCED_COUNTRIES.find(c => c.code === 'IN' || c.name.toLowerCase() === 'india');
+        }
+      }
+      // 3. Fallback: match whole-word or substring with minimum length
+      if (!match) {
+        match = ENHANCED_COUNTRIES.find(c => {
+          const cLower = c.name.toLowerCase();
+          return cLower.split(/[\s,()]+/).includes(lower) || (cLower.includes(lower) && !cLower.includes('island') && !cLower.includes('territory'));
+        });
+      }
       const wikiName = match ? (match.wikiName || match.name.split(' (')[0].trim()) : cName.replace(/ /g, '_');
       return {
         label: cName, // Exact original name from company profile
@@ -1733,7 +1746,8 @@ function AppMain() {
       // 2. Keywords / Hazards mapping using conceptUri
       if (keywords.length > 0) {
         const cleanedKeywords = keywords.map(kw => extractCleanKeyword(kw) || kw).filter(Boolean);
-        const keywordParts = cleanedKeywords.slice(0, 8).map(kw => {
+        // Include up to 20 hazards so full risk taxonomy (Cyber, Supply Chain, Disasters, etc.) is scanned
+        const keywordParts = cleanedKeywords.slice(0, 20).map(kw => {
           const normalized = kw.toLowerCase().trim();
           const conceptUri = HAZARD_CONCEPT_URIS[normalized];
           return conceptUri ? { "conceptUri": conceptUri } : { "keyword": kw };
@@ -1745,27 +1759,38 @@ function AppMain() {
         }
       }
 
-      // 3. Locations mapping - Check if we should use Option B (Location-Partitioned Retrieval)
-      // When multiple locations (e.g. India + Bangladesh) are selected, partition into individual per-location queries (up to 3)
-      // to guarantee equal representation and prevent one high-volume country from drowning out others.
-      const selectedLocations = params.cities.length
-        ? params.cities.slice(0, 3).map(c => ({ label: c.label || 'City', filter: { "conceptUri": c.uri } }))
+      // 3. Locations mapping - Multi-Location Balanced Partitioning
+      // If multiple locations (e.g. 10 countries/cities) are selected, group them into up to 4 balanced parallel queries
+      // so no single country (like Spain) drowns out others (like India or Canada).
+      const allSelectedLocItems = params.cities.length
+        ? params.cities.map(c => ({ label: c.label || 'City', filter: { "conceptUri": c.uri } }))
         : params.states.length
-        ? params.states.slice(0, 3).map(s => ({ label: s.label || 'State', filter: { "conceptUri": s.uri } }))
+        ? params.states.map(s => ({ label: s.label || 'State', filter: { "conceptUri": s.uri } }))
         : params.locs.length
-        ? params.locs.slice(0, 3).map(l => ({ label: l.label || 'Country', filter: { "conceptUri": l.uri } }))
+        ? params.locs.map(l => ({ label: l.label || 'Country', filter: { "conceptUri": l.uri } }))
         : [];
 
-      const shouldPartition = selectedLocations.length > 1;
+      // Group locations into balanced batches (maximum 3-4 parallel requests to conserve API credits)
+      let selectedLocationBatches = [];
+      if (allSelectedLocItems.length > 1) {
+        const MAX_BATCHES = 4;
+        const batchCount = Math.min(allSelectedLocItems.length, MAX_BATCHES);
+        selectedLocationBatches = Array.from({ length: batchCount }, () => []);
+        allSelectedLocItems.forEach((item, idx) => {
+          selectedLocationBatches[idx % batchCount].push(item);
+        });
+      }
 
-      if (!shouldPartition && selectedLocations.length === 1) {
-        queryConditions.push(selectedLocations[0].filter);
-      } else if (!shouldPartition && selectedLocations.length === 0) {
+      const shouldPartition = selectedLocationBatches.length > 1;
+
+      if (!shouldPartition && allSelectedLocItems.length === 1) {
+        queryConditions.push(allSelectedLocItems[0].filter);
+      } else if (!shouldPartition && allSelectedLocItems.length === 0) {
         // No explicit country/city selected
       }
 
       // 3b. Local Target Zones filter (e.g. Dadar)
-      if (activeZones.length > 0 && (radius > 0 || !selectedLocations.length)) {
+      if (activeZones.length > 0 && (radius > 0 || !allSelectedLocItems.length)) {
         const cleanZones = activeZones.map(z => z.replace(/[!?,;]+$/, '').trim()).filter(Boolean);
         if (cleanZones.length > 0) {
           const zoneParts = cleanZones.map(z => ({ "keyword": z }));
@@ -1889,30 +1914,35 @@ function AppMain() {
 
       let raw = [];
 
-      // ── EXECUTE QUERY (PARTITIONED BY LOCATION IF MULTIPLE LOCATIONS SELECTED) ──
+      // ── EXECUTE QUERY (PARTITIONED BY LOCATION BATCHES IF MULTIPLE LOCATIONS SELECTED) ──
       if (shouldPartition) {
-        addLog('QUERY', 'Location-Partitioned Retrieval', 
-          `Executing parallel queries across ${selectedLocations.length} locations (${selectedLocations.map(l => l.label).join(', ')}) to guarantee balanced representation.`,
-          { locations: selectedLocations.map(l => l.label) }
+        const batchLabels = selectedLocationBatches.map(batch => batch.map(b => b.label).join(' + '));
+        addLog('QUERY', 'Multi-Location Balanced Retrieval', 
+          `Executing parallel queries across ${selectedLocationBatches.length} location groups (${batchLabels.join(' | ')}) to guarantee balanced representation across all regions without drowning out lower-volume countries.`,
+          { batches: batchLabels }
         );
 
-        // Fetch articles in parallel for each location (e.g. India + Bangladesh)
-        const locationPromises = selectedLocations.map(async (loc) => {
-          const locQueryParts = [...queryParts, loc.filter];
+        // Fetch articles in parallel for each location batch
+        const batchPromises = selectedLocationBatches.map(async (batch, batchIdx) => {
+          const locFilter = batch.length === 1
+            ? batch[0].filter
+            : { "$or": batch.map(b => b.filter) };
+          const locQueryParts = [...queryParts, locFilter];
+          const batchName = batch.map(b => b.label).join(' / ');
           try {
             const res = await fetchNews(locQueryParts, 40);
             const articles = res?.articles?.results || [];
-            console.log(`[Partitioned Fetch] Location "${loc.label}": retrieved ${articles.length} articles.`);
-            return { location: loc.label, articles };
+            console.log(`[Partitioned Fetch] Group ${batchIdx + 1} (${batchName}): retrieved ${articles.length} articles.`);
+            return { location: batchName, articles };
           } catch (err) {
-            console.warn(`[Partitioned Fetch] Error for location "${loc.label}":`, err.message);
-            return { location: loc.label, articles: [] };
+            console.warn(`[Partitioned Fetch] Error for group (${batchName}):`, err.message);
+            return { location: batchName, articles: [] };
           }
         });
 
-        const partitionedResults = await Promise.all(locationPromises);
+        const partitionedResults = await Promise.all(batchPromises);
 
-        // Fair-share interleave: take articles evenly from each location
+        // Fair-share interleave: take articles evenly from each batch
         const maxLen = Math.max(...partitionedResults.map(p => p.articles.length), 0);
         const mergedArticles = [];
         for (let i = 0; i < maxLen; i++) {
@@ -1925,7 +1955,7 @@ function AppMain() {
         raw = mergedArticles;
 
         addLog('ANALYSIS', 'Partitioned Results Balanced', 
-          `Merged ${raw.length} articles evenly: ${partitionedResults.map(p => `${p.location} (${p.articles.length})`).join(', ')}.`,
+          `Merged ${raw.length} articles evenly across groups: ${partitionedResults.map(p => `${p.location} (${p.articles.length})`).join(', ')}.`,
           { breakdown: partitionedResults.map(p => ({ location: p.location, count: p.articles.length })) }
         );
       } else if (params.prefSrc && params.prefSrc.length > 0) {
@@ -2196,20 +2226,62 @@ function AppMain() {
       // Consolidation Logic: Intelligent Incident-Level Clustering
       const groupedEvents = {};
 
-      // Helper to match existing incident by hazard and overlapping geographical or title tokens
-      const findMatchingGroupKey = (cls, hazard, regionStr, titleStr) => {
-        const normHazard = hazard.toLowerCase().trim();
-        const normTokens = `${regionStr} ${titleStr}`.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
-        
+      // Helper to match existing incident by hazard/region/incident tokens
+      const findMatchingGroupKey = (cls, hazard, regionStr, titleStr, bodyStr = '') => {
+        const normHazard = (hazard || 'General').toLowerCase().trim();
+        const normRegion = (regionStr || '').toLowerCase().trim();
+        const normTokens = `${regionStr} ${titleStr} ${bodyStr.slice(0, 300)}`
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter(t => t.length > 2);
+
+        // Core stopwords to ignore in token overlap
+        const stopwords = new Set([
+          'region', 'province', 'autonomous', 'state', 'county', 'district', 'area',
+          'near', 'north', 'south', 'east', 'west', 'dead', 'injured', 'hits', 'strikes',
+          'after', 'with', 'from', 'over', 'more', 'than', 'today', 'says', 'amid',
+          'following', 'reported', 'reports', 'people', 'scores', 'hours'
+        ]);
+
+        const incidentTokens = normTokens.filter(t => !stopwords.has(t));
+
         for (const [key, grp] of Object.entries(groupedEvents)) {
           if (grp.ai.classification !== cls) continue;
-          if ((grp.ai.hazard || '').toLowerCase().trim() !== normHazard) continue;
 
-          const grpTokens = `${grp.ai.region || ''} ${grp.title || ''}`.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
-          // Check for shared core incident keywords (e.g. "tibet", "china", "california", "arizona", "7.0", "magnitude", "earthquake")
-          const stopwords = ['region', 'province', 'autonomous', 'state', 'county', 'district', 'area', 'near', 'north', 'south', 'east', 'west', 'dead', 'injured', 'hits', 'strikes', 'after', 'with', 'from', 'over'];
-          const commonTokens = normTokens.filter(t => grpTokens.includes(t) && !stopwords.includes(t));
-          if (commonTokens.length >= 1) {
+          const grpHazard = (grp.ai.hazard || 'General').toLowerCase().trim();
+          const grpRegion = (grp.ai.region || '').toLowerCase().trim();
+          
+          // Region compatibility check (e.g. "Spain" matches "Toledo, Spain")
+          const isRegionCompatible = !normRegion || !grpRegion ||
+            normRegion.includes(grpRegion) || grpRegion.includes(normRegion) ||
+            normRegion.split(',').some(part => grpRegion.includes(part.trim())) ||
+            grpRegion.split(',').some(part => normRegion.includes(part.trim()));
+
+          // Hazard compatibility check
+          const isHazardCompatible = grpHazard === normHazard ||
+            grpHazard.includes(normHazard) || normHazard.includes(grpHazard) ||
+            grpHazard === 'general' || normHazard === 'general' ||
+            // Transportation / infrastructure cross-hazard compatibility
+            (grpHazard.includes('train') || grpHazard.includes('rail') || grpHazard.includes('collision') || grpHazard.includes('accident') || grpHazard.includes('infrastructure')) &&
+            (normHazard.includes('train') || normHazard.includes('rail') || normHazard.includes('collision') || normHazard.includes('accident') || normHazard.includes('infrastructure'));
+
+          if (!isHazardCompatible || !isRegionCompatible) continue;
+
+          // Check for shared anchor entity/incident keywords (e.g. "train", "collision", "crash", "toledo", "spain", "derailment")
+          const grpTokens = `${grp.ai.region || ''} ${grp.title || ''} ${(grp.sources?.[0]?.body || '').slice(0, 300)}`
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(t => t.length > 2 && !stopwords.has(t));
+
+          const commonTokens = incidentTokens.filter(t => grpTokens.includes(t));
+
+          // High-significance event anchor words
+          const strongAnchors = ['train', 'crash', 'collision', 'derailment', 'earthquake', 'wildfire', 'flood', 'tsunami', 'explosion', 'ransomware', 'hostage', 'airstrike', 'toledo'];
+          const hasStrongAnchor = commonTokens.some(t => strongAnchors.includes(t));
+
+          if (commonTokens.length >= 2 || (commonTokens.length >= 1 && hasStrongAnchor)) {
             return key;
           }
         }
@@ -2222,8 +2294,8 @@ function AppMain() {
         const region = (art.ai.region || 'Global').toLowerCase().trim();
         
         // Find existing cluster or create a new unique cluster key
-        const existingKey = findMatchingGroupKey(cls, hazard, region, art.title || '');
-        const groupKey = existingKey || `${cls}_${hazard}_${region}`;
+        const existingKey = findMatchingGroupKey(cls, hazard, region, art.title || '', art.body || '');
+        const groupKey = existingKey || `${cls}_${hazard}_${region}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
         if (!groupedEvents[groupKey]) {
           groupedEvents[groupKey] = {
@@ -3445,6 +3517,16 @@ function AppMain() {
                                     }`}>
                                     {hasPreferred && ' '}{sourceText}
                                   </span>
+                                  {sourceNames.length > 1 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200" title={`Covered by: ${sourceNames.join(', ')}`}>
+                                      +{sourceNames.length - 1} sources
+                                    </span>
+                                  )}
+                                  {dupCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200" title={`${dupCount} duplicate reprints pruned`}>
+                                      +{dupCount} dups
+                                    </span>
+                                  )}
                                 </>
                               );
                             })()}

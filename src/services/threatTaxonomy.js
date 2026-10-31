@@ -105,3 +105,17 @@ export function extractCleanKeyword(threatStr) {
   return cleaned || trimmed;
 }
 
+/**
+ * Returns the domain object for a given hazard string
+ */
+export function getDomainForHazard(hazardName) {
+  if (!hazardName || typeof hazardName !== 'string') return null;
+  const target = hazardName.toLowerCase().trim();
+  for (const domain of Object.values(THREAT_DOMAINS)) {
+    if (domain.hazards.some(h => h.toLowerCase() === target || target.includes(h.toLowerCase()))) {
+      return domain;
+    }
+  }
+  return null;
+}
+

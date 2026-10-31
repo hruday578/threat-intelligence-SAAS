@@ -101,8 +101,8 @@ export function buildUnifiedSearchPlan({
   // Fallback if no specific hazards selected
   const activeHazards = allUniqueHazards.length > 0 ? allUniqueHazards : ['Cyber Attack', 'Natural Disaster', 'Supply Chain Disruption'];
 
-  // Map to keyword and conceptUri objects
-  const keywordConditions = activeHazards.slice(0, 8).map(kw => {
+  // Map to keyword and conceptUri objects (allow up to 20 threats)
+  const keywordConditions = activeHazards.slice(0, 20).map(kw => {
     const normalized = kw.toLowerCase().trim();
     const conceptUri = HAZARD_CONCEPT_URIS?.[normalized];
     return conceptUri ? { conceptUri } : { keyword: kw };
